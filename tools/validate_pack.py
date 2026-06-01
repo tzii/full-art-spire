@@ -88,6 +88,18 @@ def resolve_under(base: Path, relative_path: str) -> Path | None:
     return resolved_path
 
 
+def resolve_under_named_subdir(base: Path, subdir: str, relative_path: str) -> Path | None:
+    resolved_path = resolve_under(base, relative_path)
+    if resolved_path is None:
+        return None
+    resolved_subdir = (base.resolve() / subdir).resolve(strict=False)
+    try:
+        resolved_path.relative_to(resolved_subdir)
+    except ValueError:
+        return None
+    return resolved_path
+
+
 def is_png_path(value: str) -> bool:
     return PureWindowsPath(value).suffix.lower() == ".png" or PurePosixPath(value).suffix.lower() == ".png"
 
@@ -256,6 +268,9 @@ def validate_card(
         if release_art_path is None:
             missing_release_art += 1
             add_issue(issues, f"{label}: art must be a relative path under --release-root")
+        elif resolve_under_named_subdir(release_root, "art", art) is None:
+            missing_release_art += 1
+            add_issue(issues, f"{label}: art must resolve under art/")
         elif not release_art_path.is_file():
             missing_release_art += 1
             message = f"{label}: missing release art {art}"
