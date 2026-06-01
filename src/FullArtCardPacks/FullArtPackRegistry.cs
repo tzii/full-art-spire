@@ -11,7 +11,7 @@ internal static class FullArtPackRegistry
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
     private static readonly Dictionary<string, FullArtCardEntry> CardsByRuntimeModel = new(StringComparer.OrdinalIgnoreCase);
 
-    internal static FullArtConfig Config { get; private set; } = new() { EnabledPacks = new List<string> { "silent" } };
+    internal static FullArtConfig Config { get; set; } = new() { EnabledPacks = new List<string> { "silent" } };
     internal static string ModDirectory { get; private set; } = "";
 
     internal static void Load()

@@ -14,6 +14,12 @@ internal static class PortraitPatch
     private static readonly FieldInfo? PortraitField = typeof(NCard).GetField("_portrait", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
     private static readonly FieldInfo? AncientPortraitField = typeof(NCard).GetField("_ancientPortrait", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
+    static PortraitPatch()
+    {
+        GD.Print($"[FullArtCardPacks] PortraitField found: {PortraitField != null}");
+        GD.Print($"[FullArtCardPacks] AncientPortraitField found: {AncientPortraitField != null}");
+    }
+
     [HarmonyPostfix]
     [HarmonyPatch(typeof(NCard), "UpdateVisuals")]
     private static void UpdateVisualsPostfix(NCard __instance, PileType pileType, CardPreviewMode previewMode)
@@ -42,10 +48,17 @@ internal static class PortraitPatch
             return;
         }
 
+        GD.Print($"[FullArtCardPacks] Replacing portrait for {cardId}");
+
         if (PortraitField?.GetValue(cardNode) is TextureRect portrait)
         {
             portrait.Texture = texture;
             portrait.StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered;
+            GD.Print($"[FullArtCardPacks]   Set _portrait texture");
+        }
+        else
+        {
+            GD.Print($"[FullArtCardPacks]   _portrait field is null or not a TextureRect");
         }
 
         if (AncientPortraitField?.GetValue(cardNode) is TextureRect ancientPortrait)
@@ -53,6 +66,11 @@ internal static class PortraitPatch
             ancientPortrait.Texture = texture;
             ancientPortrait.StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered;
             ancientPortrait.Visible = true;
+            GD.Print($"[FullArtCardPacks]   Set _ancientPortrait texture");
+        }
+        else
+        {
+            GD.Print($"[FullArtCardPacks]   _ancientPortrait field is null or not a TextureRect");
         }
     }
 

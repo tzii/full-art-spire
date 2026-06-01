@@ -7,7 +7,7 @@ internal static class EffectPolicy
 {
     internal static bool ShouldApplyEffect(CardModel model, FullArtCardEntry entry)
     {
-        if (!FullArtPackRegistry.Config.EnableEffects)
+        if (!FullArtModConfig.EnableEffects)
         {
             return false;
         }
@@ -17,24 +17,28 @@ internal static class EffectPolicy
             return false;
         }
 
-        if (entry.Effects is not { } effects
-            || string.IsNullOrWhiteSpace(effects.Surface)
+        if (entry.Effects is not { } effects)
+        {
+            return false;
+        }
+
+        // Check if surface is disabled
+        if (string.IsNullOrWhiteSpace(effects.Surface)
             || string.Equals(effects.Surface, "none", StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
 
-        if (!string.Equals(effects.RarityPolicy, "rare_first", StringComparison.OrdinalIgnoreCase))
+        // Check rarity policy
+        if (string.Equals(effects.RarityPolicy, "rare_first", StringComparison.OrdinalIgnoreCase))
         {
-            return false;
+            if (FullArtModConfig.RareFirstEffects)
+            {
+                // Only apply to rare cards
+                return model.Rarity == CardRarity.Rare;
+            }
         }
 
-        if (!FullArtPackRegistry.Config.RareFirstEffects)
-        {
-            return true;
-        }
-
-        return model.Rarity == CardRarity.Rare
-            && !string.Equals(effects.Surface, "none", StringComparison.OrdinalIgnoreCase);
+        return true;
     }
 }

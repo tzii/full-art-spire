@@ -22,5 +22,15 @@
       <HintPath>$(GameManagedDir)\sts2.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="BaseLib">
+      <HintPath>lib\BaseLib.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Shaders\CardEffectShader.gdshader">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 </Project>
