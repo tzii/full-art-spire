@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
@@ -9,6 +10,9 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_RELEASE_ROOT = ROOT / "release" / "standalone" / "full_art_card_packs"
+EXPECTED_FORMAT = "sts2_full_art_standalone_pack"
+EXPECTED_VERSION = 1
+CANONICAL_ID_RE = re.compile(r"^[a-z0-9]+(?:_[a-z0-9]+)*$")
 REQUIRED_CARD_FIELDS = [
     "canonical_asset_name",
     "display_name",
@@ -21,6 +25,25 @@ REQUIRED_CARD_FIELDS = [
     "runtime_model_source",
     "effects",
 ]
+REQUIRED_TOP_LEVEL_FIELDS = {
+    "format": str,
+    "version": int,
+    "pool": str,
+    "card_count": int,
+    "cards": list,
+}
+REQUIRED_EFFECT_FIELDS = {
+    "rarity_flame": str,
+    "surface": str,
+    "rarity_policy": str,
+    "mask": str,
+    "intensity": (int, float),
+}
+EXPECTED_EFFECT_VALUES = {
+    "rarity_flame": "real_rarity",
+    "surface": "none",
+    "rarity_policy": "rare_first",
+}
 
 
 def add_issue(issues: list[str], message: str) -> None:
@@ -28,7 +51,14 @@ def add_issue(issues: list[str], message: str) -> None:
 
 
 def is_absolute_path(value: str) -> bool:
-    return Path(value).is_absolute() or PureWindowsPath(value).is_absolute() or PurePosixPath(value).is_absolute()
+    windows_path = PureWindowsPath(value)
+    return (
+        Path(value).is_absolute()
+        or windows_path.is_absolute()
+        or PurePosixPath(value).is_absolute()
+        or bool(windows_path.drive)
+        or bool(windows_path.root)
+    )
 
 
 def resolve_under(base: Path, relative_path: str) -> Path | None:
@@ -67,6 +97,71 @@ def load_pack(path: Path, issues: list[str]) -> dict[str, Any]:
     return data
 
 
+def type_name(expected_type: type | tuple[type, ...]) -> str:
+    if expected_type is int:
+        return "an integer"
+    if expected_type is str:
+        return "a string"
+    if expected_type is list:
+        return "a list"
+    if expected_type == (int, float):
+        return "numeric"
+    return "the expected type"
+
+
+def is_expected_type(value: Any, expected_type: type | tuple[type, ...]) -> bool:
+    if expected_type is int:
+        return isinstance(value, int) and not isinstance(value, bool)
+    if expected_type == (int, float):
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
+    return isinstance(value, expected_type)
+
+
+def validate_top_level_schema(pack: dict[str, Any], issues: list[str]) -> list[dict[str, Any]]:
+    for field, expected_type in REQUIRED_TOP_LEVEL_FIELDS.items():
+        if field not in pack:
+            add_issue(issues, f"missing top-level field {field}")
+            continue
+        if not is_expected_type(pack[field], expected_type):
+            add_issue(issues, f"{field} must be {type_name(expected_type)}")
+
+    pack_format = pack.get("format")
+    if isinstance(pack_format, str) and pack_format != EXPECTED_FORMAT:
+        add_issue(issues, f"format must be {EXPECTED_FORMAT!r}")
+
+    version = pack.get("version")
+    if isinstance(version, int) and not isinstance(version, bool) and version != EXPECTED_VERSION:
+        add_issue(issues, f"version must be {EXPECTED_VERSION}")
+
+    pool = pack.get("pool")
+    if isinstance(pool, str):
+        if not pool.strip():
+            add_issue(issues, "pool must be a non-empty string")
+        elif not CANONICAL_ID_RE.fullmatch(pool.strip()):
+            add_issue(issues, "pool must use lowercase snake_case")
+
+    cards = pack.get("cards")
+    return cards if isinstance(cards, list) else []
+
+
+def validate_effects_shape(label: str, effects: dict[str, Any], issues: list[str]) -> None:
+    for field, expected_type in REQUIRED_EFFECT_FIELDS.items():
+        if field not in effects:
+            add_issue(issues, f"{label}: effects missing required field {field}")
+            continue
+        value = effects[field]
+        if not is_expected_type(value, expected_type):
+            add_issue(issues, f"{label}: effects.{field} must be {type_name(expected_type)}")
+            continue
+        if expected_type is str and not value.strip():
+            add_issue(issues, f"{label}: effects.{field} must be a non-empty string")
+
+    for field, expected_value in EXPECTED_EFFECT_VALUES.items():
+        value = effects.get(field)
+        if isinstance(value, str) and value.strip() and value != expected_value:
+            add_issue(issues, f"{label}: effects.{field} must be {expected_value!r}")
+
+
 def validate_card(
     card: dict[str, Any],
     index: int,
@@ -85,6 +180,10 @@ def validate_card(
     for field in REQUIRED_CARD_FIELDS:
         if not has_required_value(card.get(field)):
             add_issue(issues, f"{label}: missing required field {field}")
+
+    canonical_asset_name = str(card.get("canonical_asset_name", "")).strip()
+    if canonical_asset_name and not CANONICAL_ID_RE.fullmatch(canonical_asset_name):
+        add_issue(issues, f"{label}: canonical_asset_name must use lowercase snake_case")
 
     source_paths = card.get("source_paths")
     if source_paths is not None and not isinstance(source_paths, list):
@@ -122,6 +221,7 @@ def validate_card(
     if not isinstance(effects, dict):
         add_issue(issues, f"{label}: effects must be an object")
         return missing_repo_final_art, missing_release_art, missing_masks
+    validate_effects_shape(label, effects, issues)
 
     mask = str(effects.get("mask", "")).strip()
     if mask:
@@ -151,15 +251,13 @@ def validate_pack(
 ) -> tuple[list[str], list[str], int, int, int, int]:
     issues: list[str] = []
     warnings: list[str] = []
-    cards = pack.get("cards")
-    if not isinstance(cards, list):
-        add_issue(issues, "pack must contain a top-level cards list")
-        return issues, warnings, 0, 0, 0, 0
+    cards = validate_top_level_schema(pack, issues)
 
     missing_repo_final_art = 0
     missing_release_art = 0
     missing_masks = 0
     runtime_models: dict[str, int] = {}
+    canonical_asset_names: dict[str, int] = {}
     for index, card in enumerate(cards, start=1):
         if not isinstance(card, dict):
             add_issue(issues, f"card #{index}: card entry must be an object")
@@ -189,6 +287,17 @@ def validate_pack(
                 )
             else:
                 runtime_models[runtime_model] = index
+
+        canonical_asset_name = str(card.get("canonical_asset_name", "")).strip()
+        if canonical_asset_name:
+            if canonical_asset_name in canonical_asset_names:
+                first_index = canonical_asset_names[canonical_asset_name]
+                add_issue(
+                    issues,
+                    f"{card_label(card, index)}: duplicate canonical_asset_name {canonical_asset_name!r} also used by card #{first_index}",
+                )
+            else:
+                canonical_asset_names[canonical_asset_name] = index
 
     declared_count = pack.get("card_count")
     if isinstance(declared_count, int) and declared_count != len(cards):
