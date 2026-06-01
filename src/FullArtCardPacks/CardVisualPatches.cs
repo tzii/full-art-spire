@@ -101,14 +101,14 @@ internal static class CardRenderRaritySpoofPatch
 
     internal static bool BeginSpoofFor(NCard cardNode)
     {
+        bool previous = _spoofForCardReload;
         CardModel? model = cardNode.Model;
         if (model is null)
         {
-            return false;
+            return previous;
         }
 
         string cardId = model.GetType().FullName ?? model.GetType().Name;
-        bool previous = _spoofForCardReload;
         _spoofForCardReload = previous || FullArtPackRegistry.HasReplacement(cardId);
         return previous;
     }
@@ -140,10 +140,11 @@ internal static class CardReloadSpoofScopePatch
         __state = CardRenderRaritySpoofPatch.BeginSpoofFor(__instance);
     }
 
-    [HarmonyPostfix]
-    private static void Postfix(bool __state)
+    [HarmonyFinalizer]
+    private static Exception? Finalizer(Exception? __exception, bool __state)
     {
         CardRenderRaritySpoofPatch.EndSpoof(__state);
+        return __exception;
     }
 }
 
@@ -156,10 +157,11 @@ internal static class CardLibraryGridFilterPatch
         __state = CardRenderRaritySpoofPatch.BeginLibraryRarityOverride();
     }
 
-    [HarmonyPostfix]
-    private static void Postfix(bool __state)
+    [HarmonyFinalizer]
+    private static Exception? Finalizer(Exception? __exception, bool __state)
     {
         CardRenderRaritySpoofPatch.EndLibraryRarityOverride(__state);
+        return __exception;
     }
 }
 
@@ -172,9 +174,10 @@ internal static class CardLibraryGridFilterWithSortPatch
         __state = CardRenderRaritySpoofPatch.BeginLibraryRarityOverride();
     }
 
-    [HarmonyPostfix]
-    private static void Postfix(bool __state)
+    [HarmonyFinalizer]
+    private static Exception? Finalizer(Exception? __exception, bool __state)
     {
         CardRenderRaritySpoofPatch.EndLibraryRarityOverride(__state);
+        return __exception;
     }
 }
