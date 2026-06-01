@@ -25,6 +25,21 @@ REQUIRED_CARD_FIELDS = [
     "runtime_model_source",
     "effects",
 ]
+REQUIRED_CARD_SCALAR_FIELDS = [
+    "canonical_asset_name",
+    "display_name",
+    "pool",
+    "status",
+    "art",
+    "repo_final_png",
+    "runtime_model",
+    "runtime_model_source",
+]
+OPTIONAL_CARD_SCALAR_FIELDS = [
+    "id",
+    "name",
+    "rarity",
+]
 REQUIRED_TOP_LEVEL_FIELDS = {
     "format": str,
     "version": int,
@@ -77,6 +92,15 @@ def is_png_path(value: str) -> bool:
     return PureWindowsPath(value).suffix.lower() == ".png" or PurePosixPath(value).suffix.lower() == ".png"
 
 
+def path_parts(value: str) -> tuple[str, ...]:
+    return tuple(part for part in PurePosixPath(value.replace("\\", "/")).parts if part not in ("", "."))
+
+
+def starts_with_path_segment(value: str, expected_segment: str) -> bool:
+    parts = path_parts(value)
+    return bool(parts) and parts[0] == expected_segment
+
+
 def card_label(card: dict[str, Any], index: int) -> str:
     return str(card.get("canonical_asset_name") or card.get("display_name") or f"card #{index}")
 
@@ -115,6 +139,25 @@ def is_expected_type(value: Any, expected_type: type | tuple[type, ...]) -> bool
     if expected_type == (int, float):
         return isinstance(value, (int, float)) and not isinstance(value, bool)
     return isinstance(value, expected_type)
+
+
+def string_field(card: dict[str, Any], field: str) -> str:
+    value = card.get(field)
+    return value.strip() if isinstance(value, str) else ""
+
+
+def validate_card_scalar_fields(label: str, card: dict[str, Any], issues: list[str]) -> None:
+    for field in REQUIRED_CARD_SCALAR_FIELDS:
+        value = card.get(field)
+        if not isinstance(value, str) or not value.strip():
+            add_issue(issues, f"{label}: {field} must be a non-empty string")
+
+    for field in OPTIONAL_CARD_SCALAR_FIELDS:
+        if field not in card or card[field] is None:
+            continue
+        value = card[field]
+        if not isinstance(value, str) or not value.strip():
+            add_issue(issues, f"{label}: {field} must be a non-empty string")
 
 
 def validate_top_level_schema(pack: dict[str, Any], issues: list[str]) -> list[dict[str, Any]]:
@@ -181,7 +224,9 @@ def validate_card(
         if not has_required_value(card.get(field)):
             add_issue(issues, f"{label}: missing required field {field}")
 
-    canonical_asset_name = str(card.get("canonical_asset_name", "")).strip()
+    validate_card_scalar_fields(label, card, issues)
+
+    canonical_asset_name = string_field(card, "canonical_asset_name")
     if canonical_asset_name and not CANONICAL_ID_RE.fullmatch(canonical_asset_name):
         add_issue(issues, f"{label}: canonical_asset_name must use lowercase snake_case")
 
@@ -189,7 +234,7 @@ def validate_card(
     if source_paths is not None and not isinstance(source_paths, list):
         add_issue(issues, f"{label}: source_paths must be a list")
 
-    repo_final = str(card.get("repo_final_png", "")).strip()
+    repo_final = string_field(card, "repo_final_png")
     if repo_final:
         if not is_png_path(repo_final):
             add_issue(issues, f"{label}: repo_final_png must point to a .png file")
@@ -201,8 +246,10 @@ def validate_card(
             missing_repo_final_art += 1
             add_issue(issues, f"{label}: missing repo_final_png {repo_final}")
 
-    art = str(card.get("art", "")).strip()
+    art = string_field(card, "art")
     if art:
+        if not starts_with_path_segment(art, "art"):
+            add_issue(issues, f"{label}: art must start with art/")
         if not is_png_path(art):
             add_issue(issues, f"{label}: art must point to a .png file")
         release_art_path = resolve_under(release_root, art)
@@ -223,7 +270,8 @@ def validate_card(
         return missing_repo_final_art, missing_release_art, missing_masks
     validate_effects_shape(label, effects, issues)
 
-    mask = str(effects.get("mask", "")).strip()
+    mask_value = effects.get("mask")
+    mask = mask_value.strip() if isinstance(mask_value, str) else ""
     if mask:
         if not is_png_path(mask):
             add_issue(issues, f"{label}: mask must point to a .png file")
