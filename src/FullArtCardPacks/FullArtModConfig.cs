@@ -2,7 +2,7 @@ using BaseLib.Config;
 
 namespace FullArtCardPacks;
 
-internal class FullArtModConfig : SimpleModConfig
+public class FullArtModConfig : SimpleModConfig
 {
     public static bool EnableEffects { get; set; } = true;
 

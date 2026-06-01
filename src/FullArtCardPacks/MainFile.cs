@@ -20,8 +20,19 @@ public static class MainFile
             GD.Print($"[{ModId}] Created FullArtModConfig instance");
             
             ModConfigRegistry.Register(ModId, modConfig);
-            GD.Print($"[{ModId}] Registered config with BaseLib (ModId: {ModId})");
-            GD.Print($"[{ModId}] Config has visible settings: {modConfig.HasVisibleSettings()}");
+
+            if (ModConfigRegistry.Get(ModId) == null)
+            {
+                GD.PushWarning($"[{ModId}] Config registration failed or was skipped. Menu entry will not appear.");
+            }
+            else if (!modConfig.HasVisibleSettings())
+            {
+                GD.PushWarning($"[{ModId}] Config registered but HasVisibleSettings() returned false.");
+            }
+            else
+            {
+                GD.Print($"[{ModId}] Config registered successfully with visible settings.");
+            }
         }
         catch (Exception ex)
         {

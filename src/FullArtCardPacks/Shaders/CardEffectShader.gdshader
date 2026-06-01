@@ -15,10 +15,14 @@ void fragment() {
     if (rarity_type == 0) {
         // Common: subtle shimmer
         float shimmer = sin(time * 2.0) * 0.5 + 0.5;
-        COLOR = mix(base, base + vec3(0.1 * shimmer), effect_strength);
+        vec4 target = base;
+        target.rgb += vec3(0.1 * shimmer);
+        COLOR = mix(base, target, effect_strength);
     } else if (rarity_type == 1) {
         // Uncommon: moderate glow
-        COLOR = mix(base, base + vec3(0.15, 0.2, 0.15), effect_strength);
+        vec4 target = base;
+        target.rgb += vec3(0.15, 0.2, 0.15);
+        COLOR = mix(base, target, effect_strength);
     } else {
         // Rare: animated foil with rainbow effect
         float foil = sin(UV.x * 10.0 + time * 3.0) * 0.5 + 0.5;
@@ -28,6 +32,8 @@ void fragment() {
             0.5 + 0.5 * sin(hue * 6.28 + 2.09),
             0.5 + 0.5 * sin(hue * 6.28 + 4.18)
         );
-        COLOR = mix(base, base + foil_color * foil * 0.4, effect_strength);
+        vec4 target = base;
+        target.rgb += foil_color * foil * 0.4;
+        COLOR = mix(base, target, effect_strength);
     }
 }

@@ -35,15 +35,17 @@ internal static class CardEffectPatch
         if (!EffectMaterials.TryGetValue(__instance, out var material))
         {
             material = CreateEffectMaterial(__instance, model, entry);
+            if (material == null)
+            {
+                // Portrait not ready yet or shader/mask not loaded — retry next frame
+                return;
+            }
             EffectMaterials[__instance] = material;
         }
 
         // Update time for animation
-        if (material != null)
-        {
-            var time = (float)Time.GetTicksMsec() / 1000.0f;
-            EffectRenderer.UpdateTime(material, time);
-        }
+        var time = (float)Time.GetTicksMsec() / 1000.0f;
+        EffectRenderer.UpdateTime(material, time);
     }
 
     private static ShaderMaterial? CreateEffectMaterial(NCard cardNode, CardModel model, FullArtCardEntry entry)

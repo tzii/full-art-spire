@@ -27,7 +27,15 @@ internal static class EffectRenderer
     internal static ShaderMaterial? CreateEffectMaterial(FullArtCardEntry entry, int rarityType, float intensity)
     {
         if (_effectShader == null)
+        {
+            Initialize(); // Attempt recovery if startup skipped or failed
+        }
+
+        if (_effectShader == null)
+        {
+            GD.PushWarning("[FullArtCardPacks] Cannot create effect material: shader is null.");
             return null;
+        }
 
         if (string.IsNullOrEmpty(entry.Effects?.Mask))
             return null;
@@ -65,6 +73,7 @@ internal static class EffectRenderer
         }
 
         var image = Image.LoadFromFile(fullPath);
+        GD.Print($"[FullArtCardPacks] Loaded mask {maskPath}: size={image.GetSize()}, format={image.GetFormat()}");
         var texture = ImageTexture.CreateFromImage(image);
         MaskCache[maskPath] = texture;
         return texture;
