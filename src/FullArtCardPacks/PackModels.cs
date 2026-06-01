@@ -8,7 +8,7 @@ internal sealed record FullArtConfig
     public bool Enabled { get; init; } = true;
 
     [JsonPropertyName("enabled_packs")]
-    public List<string> EnabledPacks { get; init; } = new();
+    public List<string>? EnabledPacks { get; init; } = new();
 
     [JsonPropertyName("enable_effects")]
     public bool EnableEffects { get; init; }
@@ -29,7 +29,7 @@ internal sealed record FullArtPackManifest
     public string Pool { get; init; } = "";
 
     [JsonPropertyName("cards")]
-    public List<FullArtCardEntry> Cards { get; init; } = new();
+    public List<FullArtCardEntry>? Cards { get; init; } = new();
 }
 
 internal sealed record FullArtCardEntry
@@ -50,7 +50,7 @@ internal sealed record FullArtCardEntry
     public string Art { get; init; } = "";
 
     [JsonPropertyName("effects")]
-    public FullArtEffectMetadata Effects { get; init; } = new();
+    public FullArtEffectMetadata? Effects { get; init; } = new();
 }
 
 internal sealed record FullArtEffectMetadata

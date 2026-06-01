@@ -11,7 +11,12 @@ internal static class TextureCache
     internal static bool TryGetTexture(FullArtCardEntry entry, out Texture2D? texture)
     {
         texture = null;
-        string artPath = FullArtPackRegistry.ResolveModPath(entry.Art);
+        if (!FullArtPackRegistry.TryResolveModPath(entry.Art, out string artPath))
+        {
+            GD.PushWarning($"[{ModId}] Invalid art path for {entry.CanonicalAssetName}: {entry.Art}");
+            return false;
+        }
+
         if (Cache.TryGetValue(artPath, out texture))
         {
             return texture is not null;

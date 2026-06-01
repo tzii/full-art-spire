@@ -11,12 +11,29 @@ internal static class EffectPolicy
             return false;
         }
 
+        if (CardRenderRaritySpoofPatch.IsSpoofingForCardReload)
+        {
+            return false;
+        }
+
+        if (entry.Effects is not { } effects
+            || string.IsNullOrWhiteSpace(effects.Surface)
+            || string.Equals(effects.Surface, "none", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!string.Equals(effects.RarityPolicy, "rare_first", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
         if (!FullArtPackRegistry.Config.RareFirstEffects)
         {
-            return !string.Equals(entry.Effects.Surface, "none", StringComparison.OrdinalIgnoreCase);
+            return true;
         }
 
         return model.Rarity == CardRarity.Rare
-            && !string.Equals(entry.Effects.Surface, "none", StringComparison.OrdinalIgnoreCase);
+            && !string.Equals(effects.Surface, "none", StringComparison.OrdinalIgnoreCase);
     }
 }

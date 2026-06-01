@@ -74,6 +74,8 @@ internal static class CardRenderRaritySpoofPatch
     [ThreadStatic]
     private static bool _treatMappedBasicCardsAsCommonInLibrary;
 
+    internal static bool IsSpoofingForCardReload => _spoofForCardReload;
+
     [HarmonyPostfix]
     private static void Postfix(CardModel __instance, ref CardRarity __result)
     {

@@ -26,8 +26,15 @@ internal static class FullArtPackRegistry
             return;
         }
 
-        foreach (string pool in Config.EnabledPacks.Where(pool => !string.IsNullOrWhiteSpace(pool)))
+        IEnumerable<string> enabledPacks = Config.EnabledPacks ?? Enumerable.Empty<string>();
+        foreach (string pool in enabledPacks.Where(pool => !string.IsNullOrWhiteSpace(pool)))
         {
+            if (!IsValidPoolName(pool))
+            {
+                GD.PushWarning($"[{ModId}] Skipping invalid configured pool name: {pool}");
+                continue;
+            }
+
             LoadPack(pool);
         }
 
@@ -39,7 +46,8 @@ internal static class FullArtPackRegistry
         return !string.IsNullOrWhiteSpace(runtimeModel)
             && CardsByRuntimeModel.TryGetValue(runtimeModel, out FullArtCardEntry? entry)
             && !string.IsNullOrWhiteSpace(entry.Art)
-            && File.Exists(ResolveModPath(entry.Art));
+            && TryResolveModPath(entry.Art, out string artPath)
+            && File.Exists(artPath);
     }
 
     internal static bool TryGetCard(string? runtimeModel, out FullArtCardEntry? entry)
@@ -49,10 +57,28 @@ internal static class FullArtPackRegistry
             && CardsByRuntimeModel.TryGetValue(runtimeModel, out entry);
     }
 
+    internal static bool TryResolveModPath(string? relativePath, out string fullPath)
+    {
+        fullPath = "";
+        if (string.IsNullOrWhiteSpace(relativePath) || Path.IsPathRooted(relativePath))
+        {
+            return false;
+        }
+
+        string modRoot = Path.GetFullPath(ModDirectory);
+        string modRootTrimmed = Path.TrimEndingDirectorySeparator(modRoot);
+        string modRootWithSeparator = modRootTrimmed + Path.DirectorySeparatorChar;
+        string normalized = relativePath.Replace('/', Path.DirectorySeparatorChar);
+        fullPath = Path.GetFullPath(Path.Combine(ModDirectory, normalized));
+        return fullPath.Equals(modRootTrimmed, StringComparison.OrdinalIgnoreCase)
+            || fullPath.StartsWith(modRootWithSeparator, StringComparison.OrdinalIgnoreCase);
+    }
+
     internal static string ResolveModPath(string relativePath)
     {
-        string normalized = relativePath.Replace('/', Path.DirectorySeparatorChar);
-        return Path.Combine(ModDirectory, normalized);
+        return TryResolveModPath(relativePath, out string fullPath)
+            ? fullPath
+            : Path.Combine(ModDirectory, "__invalid__");
     }
 
     private static FullArtConfig LoadConfig()
@@ -66,8 +92,9 @@ internal static class FullArtPackRegistry
 
         try
         {
-            return JsonSerializer.Deserialize<FullArtConfig>(File.ReadAllText(configPath), JsonOptions)
+            FullArtConfig config = JsonSerializer.Deserialize<FullArtConfig>(File.ReadAllText(configPath), JsonOptions)
                 ?? DefaultConfig();
+            return NormalizeConfig(config);
         }
         catch (Exception ex)
         {
@@ -88,9 +115,34 @@ internal static class FullArtPackRegistry
         };
     }
 
+    private static FullArtConfig NormalizeConfig(FullArtConfig config)
+    {
+        if (config.EnabledPacks is not null)
+        {
+            return config;
+        }
+
+        GD.PushWarning($"[{ModId}] Config enabled_packs is null; no packs will be loaded.");
+        return config with
+        {
+            EnabledPacks = new List<string>(),
+        };
+    }
+
     private static void LoadPack(string pool)
     {
-        string packPath = ResolveModPath($"packs/{pool}.json");
+        if (!IsValidPoolName(pool))
+        {
+            GD.PushWarning($"[{ModId}] Skipping invalid pack name: {pool}");
+            return;
+        }
+
+        if (!TryResolveModPath($"packs/{pool}.json", out string packPath))
+        {
+            GD.PushWarning($"[{ModId}] Skipping pack outside mod directory: {pool}");
+            return;
+        }
+
         if (!File.Exists(packPath))
         {
             GD.PushWarning($"[{ModId}] Missing pack manifest: {packPath}");
@@ -114,15 +166,39 @@ internal static class FullArtPackRegistry
             return;
         }
 
-        foreach (FullArtCardEntry card in pack.Cards)
+        if (pack.Cards is null)
         {
+            GD.PushWarning($"[{ModId}] Skipping pack manifest with missing cards: {packPath}");
+            return;
+        }
+
+        foreach (FullArtCardEntry? card in pack.Cards)
+        {
+            if (card is null)
+            {
+                GD.PushWarning($"[{ModId}] Skipping null card entry in {packPath}");
+                continue;
+            }
+
             if (string.IsNullOrWhiteSpace(card.RuntimeModel))
             {
                 GD.PushWarning($"[{ModId}] Skipping {card.CanonicalAssetName}: missing runtime_model");
                 continue;
             }
 
+            if (!TryResolveModPath(card.Art, out string artPath))
+            {
+                GD.PushWarning($"[{ModId}] Skipping {card.CanonicalAssetName}: art path must stay under mod directory");
+                continue;
+            }
+
             CardsByRuntimeModel[card.RuntimeModel] = card;
         }
+    }
+
+    private static bool IsValidPoolName(string pool)
+    {
+        return !string.IsNullOrWhiteSpace(pool)
+            && pool.All(character => char.IsAsciiLetterLower(character) || char.IsAsciiDigit(character) || character == '_');
     }
 }
