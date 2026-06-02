@@ -49,7 +49,9 @@ public static class MainFile
             GD.Print($"[{ModId}] Effect renderer initialized");
         }
 
-        new Harmony(ModId).PatchAll();
+        var harmony = new Harmony(ModId);
+        harmony.PatchAll();
+        CardEffectPatch.TryPatch(harmony);
         GD.Print($"[{ModId}] initialized.");
     }
 }

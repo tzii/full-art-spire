@@ -54,9 +54,9 @@ internal static class EffectRenderer
         return material;
     }
 
-    internal static void UpdateTime(ShaderMaterial material, float time)
+    internal static void UpdateIntensity(ShaderMaterial material, float intensity)
     {
-        material.SetShaderParameter("time", time);
+        material.SetShaderParameter("intensity", intensity);
     }
 
     private static Texture2D? LoadMask(string maskPath)

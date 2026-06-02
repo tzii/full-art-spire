@@ -7,57 +7,97 @@ using MegaCrit.Sts2.Core.Nodes.Cards;
 
 namespace FullArtCardPacks;
 
-[HarmonyPatch(typeof(NCard), "_Process")]
 internal static class CardEffectPatch
 {
     private static readonly FieldInfo? PortraitField = typeof(NCard).GetField("_portrait", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-    private static readonly Dictionary<NCard, ShaderMaterial?> EffectMaterials = new();
+    private static readonly FieldInfo? AncientPortraitField = typeof(NCard).GetField("_ancientPortrait", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+    private static readonly Dictionary<NCard, ShaderMaterial> EffectMaterials = new();
 
-    [HarmonyPostfix]
-    private static void Postfix(NCard __instance, double delta)
+    internal static void TryPatch(Harmony harmony)
     {
-        if (!FullArtModConfig.EnableEffects)
-            return;
-
-        var model = __instance.Model;
-        if (model == null)
-            return;
-
-        var cardId = model.GetType().FullName ?? model.GetType().Name;
-        
-        if (!FullArtPackRegistry.TryGetCard(cardId, out var entry) || entry == null)
-            return;
-
-        if (!EffectPolicy.ShouldApplyEffect(model, entry))
-            return;
-
-        // Get or create effect material
-        if (!EffectMaterials.TryGetValue(__instance, out var material))
+        try
         {
-            material = CreateEffectMaterial(__instance, model, entry);
-            if (material == null)
+            MethodInfo? processMethod = AccessTools.Method(typeof(NCard), "_Process");
+            MethodInfo? processPostfix = AccessTools.Method(typeof(CardEffectPatch), nameof(ProcessPostfix));
+            MethodInfo? exitTreeMethod = AccessTools.Method(typeof(NCard), "_ExitTree");
+            MethodInfo? cleanupPostfix = AccessTools.Method(typeof(CardEffectPatch), nameof(CleanupPostfix));
+
+            if (exitTreeMethod is not null && cleanupPostfix is not null)
             {
-                // Portrait not ready yet or shader/mask not loaded — retry next frame
+                harmony.Patch(exitTreeMethod, postfix: new HarmonyMethod(cleanupPostfix));
+            }
+            else
+            {
+                GD.PushWarning("[FullArtCardPacks] NCard._ExitTree not found; effect cleanup patch is disabled.");
+            }
+
+            if (processMethod is null || processPostfix is null)
+            {
+                GD.PushWarning("[FullArtCardPacks] NCard._Process not found; animated card effects are disabled for this game version.");
                 return;
             }
-            EffectMaterials[__instance] = material;
+
+            harmony.Patch(processMethod, postfix: new HarmonyMethod(processPostfix));
+            GD.Print("[FullArtCardPacks] Effect tick patch applied.");
+        }
+        catch (Exception ex)
+        {
+            GD.PushWarning($"[FullArtCardPacks] Failed to patch animated effects; full-art replacements will continue without effects. {ex.Message}");
+        }
+    }
+
+    internal static void ApplyOrUpdate(NCard cardNode)
+    {
+        var model = cardNode.Model;
+        if (model == null)
+        {
+            ClearEffectMaterial(cardNode);
+            return;
         }
 
-        // Update time for animation
-        var time = (float)Time.GetTicksMsec() / 1000.0f;
-        EffectRenderer.UpdateTime(material, time);
+        var cardId = model.GetType().FullName ?? model.GetType().Name;
+
+        if (!FullArtPackRegistry.TryGetCard(cardId, out var entry) || entry == null)
+        {
+            ClearEffectMaterial(cardNode);
+            return;
+        }
+
+        if (!EffectPolicy.ShouldApplyEffect(model, entry))
+        {
+            ClearEffectMaterial(cardNode);
+            return;
+        }
+
+        if (!EffectMaterials.TryGetValue(cardNode, out var material))
+        {
+            material = CreateEffectMaterial(cardNode, model, entry);
+            if (material == null)
+            {
+                return;
+            }
+            EffectMaterials[cardNode] = material;
+        }
+
+        float intensity = Math.Clamp(FullArtModConfig.EffectIntensity, 0f, 1f);
+        EffectRenderer.UpdateIntensity(material, intensity);
+        ApplyMaterialToPortraits(cardNode, material);
+    }
+
+    private static void ProcessPostfix(NCard __instance, double delta)
+    {
+        ApplyOrUpdate(__instance);
     }
 
     private static ShaderMaterial? CreateEffectMaterial(NCard cardNode, CardModel model, FullArtCardEntry entry)
     {
-        // Get the portrait TextureRect
-        if (PortraitField?.GetValue(cardNode) is not TextureRect portrait)
+        if (PortraitField?.GetValue(cardNode) is not TextureRect
+            && AncientPortraitField?.GetValue(cardNode) is not TextureRect)
         {
-            GD.Print($"[FullArtCardPacks] No portrait field for {entry.CanonicalAssetName}");
+            GD.Print($"[FullArtCardPacks] No portrait fields for {entry.CanonicalAssetName}");
             return null;
         }
 
-        // Determine rarity type
         int rarityType = model.Rarity switch
         {
             CardRarity.Common => 0,
@@ -66,10 +106,8 @@ internal static class CardEffectPatch
             _ => 0
         };
 
-        // Get intensity from config or entry
-        float intensity = entry.Effects?.Intensity ?? FullArtModConfig.EffectIntensity;
+        float intensity = Math.Clamp(FullArtModConfig.EffectIntensity, 0f, 1f);
 
-        // Create material
         var material = EffectRenderer.CreateEffectMaterial(entry, rarityType, intensity);
         if (material == null)
         {
@@ -77,26 +115,48 @@ internal static class CardEffectPatch
             return null;
         }
 
-        // Apply material directly to portrait TextureRect
-        portrait.Material = material;
+        ApplyMaterialToPortraits(cardNode, material);
 
         GD.Print($"[FullArtCardPacks] Applied effect to portrait for {entry.CanonicalAssetName} (rarity: {rarityType}, intensity: {intensity})");
 
         return material;
     }
 
-    [HarmonyPatch(typeof(NCard), "_ExitTree")]
-    [HarmonyPostfix]
+    private static void ApplyMaterialToPortraits(NCard cardNode, ShaderMaterial material)
+    {
+        if (PortraitField?.GetValue(cardNode) is TextureRect portrait)
+        {
+            portrait.Material = material;
+        }
+
+        if (AncientPortraitField?.GetValue(cardNode) is TextureRect ancientPortrait)
+        {
+            ancientPortrait.Material = material;
+        }
+    }
+
+    private static void ClearEffectMaterial(NCard cardNode)
+    {
+        if (!EffectMaterials.TryGetValue(cardNode, out var material))
+        {
+            return;
+        }
+
+        if (PortraitField?.GetValue(cardNode) is TextureRect portrait && portrait.Material == material)
+        {
+            portrait.Material = null;
+        }
+
+        if (AncientPortraitField?.GetValue(cardNode) is TextureRect ancientPortrait && ancientPortrait.Material == material)
+        {
+            ancientPortrait.Material = null;
+        }
+
+        EffectMaterials.Remove(cardNode);
+    }
+
     private static void CleanupPostfix(NCard __instance)
     {
-        if (EffectMaterials.TryGetValue(__instance, out var material))
-        {
-            // Restore original material if needed
-            if (PortraitField?.GetValue(__instance) is TextureRect portrait && portrait.Material == material)
-            {
-                portrait.Material = null;
-            }
-            EffectMaterials.Remove(__instance);
-        }
+        ClearEffectMaterial(__instance);
     }
 }

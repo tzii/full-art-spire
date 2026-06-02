@@ -83,7 +83,7 @@ internal static class FullArtPackRegistry
 
     private static FullArtConfig LoadConfig()
     {
-        string configPath = ResolveModPath("full_art_card_packs.json");
+        string configPath = ResolveModPath("full_art_card_packs.cfg");
         if (!File.Exists(configPath))
         {
             GD.PushWarning($"[{ModId}] Missing config: {configPath}; defaulting to Silent.");
@@ -137,7 +137,7 @@ internal static class FullArtPackRegistry
             return;
         }
 
-        if (!TryResolveModPath($"packs/{pool}.json", out string packPath))
+        if (!TryResolveModPath($"packs/{pool}.pack", out string packPath))
         {
             GD.PushWarning($"[{ModId}] Skipping pack outside mod directory: {pool}");
             return;

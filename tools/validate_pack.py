@@ -56,8 +56,17 @@ REQUIRED_EFFECT_FIELDS = {
 }
 EXPECTED_EFFECT_VALUES = {
     "rarity_flame": "real_rarity",
-    "surface": "none",
     "rarity_policy": "rare_first",
+}
+ALLOWED_EFFECT_SURFACES = {
+    "none",
+    "shimmer",
+    "glow",
+    "foil",
+    "holo",
+    "reverse",
+    "etched",
+    "prismatic",
 }
 
 
@@ -216,6 +225,30 @@ def validate_effects_shape(label: str, effects: dict[str, Any], issues: list[str
         if isinstance(value, str) and value.strip() and value != expected_value:
             add_issue(issues, f"{label}: effects.{field} must be {expected_value!r}")
 
+    surface = effects.get("surface")
+    if isinstance(surface, str) and surface.strip() and surface not in ALLOWED_EFFECT_SURFACES:
+        allowed = ", ".join(sorted(repr(value) for value in ALLOWED_EFFECT_SURFACES))
+        add_issue(issues, f"{label}: effects.surface must be one of {allowed}")
+
+
+def is_effect_surface_enabled(effects: dict[str, Any]) -> bool:
+    surface = effects.get("surface")
+    return isinstance(surface, str) and surface.strip().lower() != "none"
+
+
+def validate_mask_contents(label: str, mask_path: Path, mask: str, issues: list[str]) -> None:
+    try:
+        from PIL import Image
+
+        with Image.open(mask_path) as image:
+            extrema = image.convert("L").getextrema()
+    except Exception as exc:
+        add_issue(issues, f"{label}: could not inspect mask {mask}: {exc}")
+        return
+
+    if extrema[0] == extrema[1]:
+        add_issue(issues, f"{label}: uniform mask {mask} ({extrema[0]})")
+
 
 def validate_card(
     card: dict[str, Any],
@@ -284,6 +317,7 @@ def validate_card(
         add_issue(issues, f"{label}: effects must be an object")
         return missing_repo_final_art, missing_release_art, missing_masks
     validate_effects_shape(label, effects, issues)
+    surface_enabled = is_effect_surface_enabled(effects)
 
     mask_value = effects.get("mask")
     mask = mask_value.strip() if isinstance(mask_value, str) else ""
@@ -297,10 +331,14 @@ def validate_card(
         elif not mask_path.is_file():
             missing_masks += 1
             message = f"{label}: missing mask {mask}"
-            if allow_missing_masks:
+            if not surface_enabled:
+                pass
+            elif allow_missing_masks:
                 add_issue(warnings, message)
             else:
                 add_issue(issues, message)
+        elif surface_enabled:
+            validate_mask_contents(label, mask_path, mask, issues)
 
     return missing_repo_final_art, missing_release_art, missing_masks
 

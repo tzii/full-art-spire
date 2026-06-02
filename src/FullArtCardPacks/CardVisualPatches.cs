@@ -72,6 +72,8 @@ internal static class PortraitPatch
         {
             GD.Print($"[FullArtCardPacks]   _ancientPortrait field is null or not a TextureRect");
         }
+
+        CardEffectPatch.ApplyOrUpdate(cardNode);
     }
 
     private static bool TryGetReplacementTexture(string cardId, out Texture2D? texture)
