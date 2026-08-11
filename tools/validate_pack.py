@@ -343,6 +343,26 @@ def validate_card(
     return missing_repo_final_art, missing_release_art, missing_masks
 
 
+def validate_release_packs(pack_paths: list[Path]) -> list[str]:
+    issues: list[str] = []
+    seen: dict[str, str] = {}
+    for pack_path in pack_paths:
+        try:
+            pack = json.loads(pack_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        for card in pack.get("cards", []):
+            if not isinstance(card, dict):
+                continue
+            model = str(card.get("runtime_model", "")).strip()
+            if model:
+                if model in seen:
+                    issues.append(f"duplicate runtime_model {model!r} in {pack_path.name} and {seen[model]}")
+                else:
+                    seen[model] = pack_path.name
+    return issues
+
+
 def validate_pack(
     pack: dict[str, Any],
     root: Path,
@@ -352,6 +372,21 @@ def validate_pack(
 ) -> tuple[list[str], list[str], int, int, int, int]:
     issues: list[str] = []
     warnings: list[str] = []
+    # Validate roster provenance if present
+    if "roster" in pack:
+        roster = pack["roster"]
+        if not isinstance(roster, dict):
+            add_issue(issues, "roster must be an object")
+        else:
+            if not isinstance(roster.get("game_version"), str) or not roster["game_version"].strip():
+                add_issue(issues, "roster.game_version must be a non-empty string")
+            if not isinstance(roster.get("snapshot"), str) or not roster["snapshot"].strip():
+                add_issue(issues, "roster.snapshot must be a non-empty string")
+    # Retired check
+    for idx, card in enumerate(pack.get("cards", []), start=1):
+        if isinstance(card, dict) and str(card.get("roster_status", "")).strip() == "retired":
+            add_issue(issues, f"{card_label(card, idx)}: retired runtime model")
+
     cards = validate_top_level_schema(pack, issues)
 
     missing_repo_final_art = 0
