@@ -18,6 +18,8 @@ public static class MainFile
         {
             var modConfig = new FullArtModConfig();
             GD.Print($"[{ModId}] Created FullArtModConfig instance");
+            modConfig.ConfigChanged += (_, _) => EffectOverlayManager.RefreshTrackedCards();
+            modConfig.OnConfigReloaded += EffectOverlayManager.RefreshTrackedCards;
             
             ModConfigRegistry.Register(ModId, modConfig);
 
@@ -41,7 +43,7 @@ public static class MainFile
 
         FullArtPackRegistry.Load();
 
-        GD.Print($"[{ModId}] EnableEffects={FullArtModConfig.EnableEffects}, EffectIntensity={FullArtModConfig.EffectIntensity}, RareFirstEffects={FullArtModConfig.RareFirstEffects}");
+        GD.Print($"[{ModId}] BaseLib effect settings: enabled={FullArtModConfig.EnableEffects}, intensity={FullArtModConfig.EffectIntensity}, rareFirst={FullArtModConfig.RareFirstEffects}, gridMotion={FullArtModConfig.GridMotion}, focusedMotion={FullArtModConfig.FocusedMotion}");
         
         if (FullArtModConfig.EnableEffects)
         {
@@ -51,7 +53,6 @@ public static class MainFile
 
         var harmony = new Harmony(ModId);
         harmony.PatchAll();
-        CardEffectPatch.TryPatch(harmony);
         GD.Print($"[{ModId}] initialized.");
     }
 }

@@ -5,21 +5,21 @@
     <Nullable>enable</Nullable>
     <AssemblyName>FullArtCardPacks</AssemblyName>
     <RootNamespace>FullArtCardPacks</RootNamespace>
-    <GameDir>C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2</GameDir>
-    <GameManagedDir>$(GameDir)\data_sts2_windows_x86_64</GameManagedDir>
   </PropertyGroup>
+
+  <Import Project="..\Sts2PathDiscovery.props" />
 
   <ItemGroup>
     <Reference Include="0Harmony">
-      <HintPath>$(GameManagedDir)\0Harmony.dll</HintPath>
+      <HintPath>$(Sts2DataDir)\0Harmony.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="GodotSharp">
-      <HintPath>$(GameManagedDir)\GodotSharp.dll</HintPath>
+      <HintPath>$(Sts2DataDir)\GodotSharp.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="sts2">
-      <HintPath>$(GameManagedDir)\sts2.dll</HintPath>
+      <HintPath>$(Sts2DataDir)\sts2.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="BaseLib">

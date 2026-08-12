@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace FullArtCardPacks;
@@ -10,14 +11,8 @@ internal sealed record FullArtConfig
     [JsonPropertyName("enabled_packs")]
     public List<string>? EnabledPacks { get; init; } = new();
 
-    [JsonPropertyName("enable_effects")]
-    public bool EnableEffects { get; init; }
-
-    [JsonPropertyName("effect_intensity")]
-    public float EffectIntensity { get; init; } = 0.3f;
-
-    [JsonPropertyName("rare_first_effects")]
-    public bool RareFirstEffects { get; init; } = true;
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? AdditionalSettings { get; init; }
 }
 
 internal sealed record FullArtPackManifest
@@ -64,6 +59,18 @@ internal sealed record FullArtEffectMetadata
     [JsonPropertyName("mask")]
     public string Mask { get; init; } = "";
 
+    [JsonPropertyName("effect_mask")]
+    public string EffectMask { get; init; } = "";
+
+    [JsonPropertyName("protection_mask")]
+    public string ProtectionMask { get; init; } = "";
+
+    [JsonPropertyName("permission_mask")]
+    public string PermissionMask { get; init; } = "";
+
     [JsonPropertyName("intensity")]
-    public float Intensity { get; init; } = 0.3f;
+    public float Intensity { get; init; } = 1f;
+
+    [JsonPropertyName("phase_seed")]
+    public float? PhaseSeed { get; init; }
 }

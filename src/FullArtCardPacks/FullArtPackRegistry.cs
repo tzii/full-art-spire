@@ -94,6 +94,7 @@ internal static class FullArtPackRegistry
         {
             FullArtConfig config = JsonSerializer.Deserialize<FullArtConfig>(File.ReadAllText(configPath), JsonOptions)
                 ?? DefaultConfig();
+            WarnIgnoredLegacyEffectSettings(config);
             return NormalizeConfig(config);
         }
         catch (Exception ex)
@@ -109,10 +110,19 @@ internal static class FullArtPackRegistry
         {
             Enabled = true,
             EnabledPacks = new List<string> { "silent" },
-            EnableEffects = false,
-            EffectIntensity = 0.3f,
-            RareFirstEffects = true,
         };
+    }
+
+    private static void WarnIgnoredLegacyEffectSettings(FullArtConfig config)
+    {
+        string[] legacyKeys = { "enable_effects", "effect_intensity", "rare_first_effects", "grid_motion", "focused_motion" };
+        string[] present = legacyKeys
+            .Where(key => config.AdditionalSettings?.ContainsKey(key) == true)
+            .ToArray();
+        if (present.Length > 0)
+        {
+            GD.PushWarning($"[{ModId}] Ignoring legacy effect settings in full_art_card_packs.cfg ({string.Join(", ", present)}). BaseLib is the single runtime effect configuration source.");
+        }
     }
 
     private static FullArtConfig NormalizeConfig(FullArtConfig config)

@@ -1,0 +1,29 @@
+<Project>
+  <!-- Override with /p:Sts2Path=... or /p:Sts2DataDir=... when auto-discovery is unsuitable. -->
+  <PropertyGroup>
+    <IsLinux>$([MSBuild]::IsOSPlatform('Linux'))</IsLinux>
+    <IsOSX>$([MSBuild]::IsOSPlatform('OSX'))</IsOSX>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsLinux)' != 'True' And '$(IsOSX)' != 'True'">
+    <RegistrySts2Path>$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 2868840', 'InstallLocation', '', RegistryView.Registry64, RegistryView.Registry32))</RegistrySts2Path>
+    <SteamRoot>$(registry:HKEY_CURRENT_USER\Software\Valve\Steam@SteamPath)</SteamRoot>
+    <SteamLibraryPath Condition="'$(SteamLibraryPath)' == '' And Exists('$(SteamRoot)/steamapps/common/Slay the Spire 2')">$(SteamRoot)/steamapps</SteamLibraryPath>
+    <SteamLibraryPath Condition="'$(SteamLibraryPath)' == ''">C:/Program Files (x86)/Steam/steamapps</SteamLibraryPath>
+    <Sts2Path Condition="'$(Sts2Path)' == '' And Exists('$(RegistrySts2Path)/data_sts2_windows_x86_64')">$(RegistrySts2Path)</Sts2Path>
+    <Sts2Path Condition="'$(Sts2Path)' == ''">$(SteamLibraryPath)/common/Slay the Spire 2</Sts2Path>
+    <Sts2DataDir Condition="'$(Sts2DataDir)' == ''">$(Sts2Path)/data_sts2_windows_x86_64</Sts2DataDir>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsLinux)' == 'True'">
+    <SteamLibraryPath Condition="'$(SteamLibraryPath)' == ''">$(HOME)/.local/share/Steam/steamapps</SteamLibraryPath>
+    <Sts2Path Condition="'$(Sts2Path)' == ''">$(SteamLibraryPath)/common/Slay the Spire 2</Sts2Path>
+    <Sts2DataDir Condition="'$(Sts2DataDir)' == ''">$(Sts2Path)/data_sts2_linuxbsd_x86_64</Sts2DataDir>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsOSX)' == 'True'">
+    <SteamLibraryPath Condition="'$(SteamLibraryPath)' == ''">$(HOME)/Library/Application Support/Steam/steamapps</SteamLibraryPath>
+    <Sts2Path Condition="'$(Sts2Path)' == ''">$(SteamLibraryPath)/common/Slay the Spire 2</Sts2Path>
+    <Sts2DataDir Condition="'$(Sts2DataDir)' == ''">$(Sts2Path)/SlayTheSpire2.app/Contents/Resources/data_sts2_macos_x86_64</Sts2DataDir>
+  </PropertyGroup>
+</Project>

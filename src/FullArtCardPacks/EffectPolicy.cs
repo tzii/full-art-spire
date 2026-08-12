@@ -3,42 +3,47 @@ using MegaCrit.Sts2.Core.Models;
 
 namespace FullArtCardPacks;
 
+internal readonly record struct EffectDecision(
+    bool Enabled,
+    EffectSurface Surface,
+    float Intensity,
+    float Phase,
+    string PermissionMask);
+
 internal static class EffectPolicy
 {
-    internal static bool ShouldApplyEffect(CardModel model, FullArtCardEntry entry)
+    private static readonly EffectDecision Disabled = new(false, EffectSurface.None, 0f, 0f, "");
+
+    internal static EffectDecision Decide(CardModel model, FullArtCardEntry entry)
     {
-        if (!FullArtModConfig.EnableEffects)
+        if (!FullArtModConfig.EnableEffects
+            || entry.Effects is not { } effects
+            || CardRenderRaritySpoofPatch.IsSpoofingForCardReload)
         {
-            return false;
+            return Disabled;
         }
 
-        if (CardRenderRaritySpoofPatch.IsSpoofingForCardReload)
+        EffectSurface surface = EffectSurfaceParser.Parse(effects.Surface);
+        if (surface == EffectSurface.None)
         {
-            return false;
+            return Disabled;
         }
 
-        if (entry.Effects is not { } effects)
+        if (string.Equals(effects.RarityPolicy, "rare_first", StringComparison.OrdinalIgnoreCase)
+            && FullArtModConfig.RareFirstEffects
+            && model.Rarity != CardRarity.Rare)
         {
-            return false;
+            return Disabled;
         }
 
-        // Check if surface is disabled
-        if (string.IsNullOrWhiteSpace(effects.Surface)
-            || string.Equals(effects.Surface, "none", StringComparison.OrdinalIgnoreCase))
+        string permissionMask = effects.PermissionMask.Trim();
+        if (permissionMask.Length == 0)
         {
-            return false;
+            return Disabled;
         }
 
-        // Check rarity policy
-        if (string.Equals(effects.RarityPolicy, "rare_first", StringComparison.OrdinalIgnoreCase))
-        {
-            if (FullArtModConfig.RareFirstEffects)
-            {
-                // Only apply to rare cards
-                return model.Rarity == CardRarity.Rare;
-            }
-        }
-
-        return true;
+        float intensity = EffectSettings.EffectiveIntensity(effects.Intensity, FullArtModConfig.EffectIntensity);
+        float phase = EffectSettings.PhaseFor(entry.RuntimeModel, effects.PhaseSeed);
+        return new(intensity > 0f, surface, intensity, phase, permissionMask);
     }
 }

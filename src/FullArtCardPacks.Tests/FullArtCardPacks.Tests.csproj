@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <Import Project="..\Sts2PathDiscovery.props" />
+  <ItemGroup>
+    <ProjectReference Include="..\FullArtCardPacks\FullArtCardPacks.csproj" />
+    <Reference Include="0Harmony"><HintPath>$(Sts2DataDir)\0Harmony.dll</HintPath><Private>true</Private></Reference>
+    <Reference Include="GodotSharp"><HintPath>$(Sts2DataDir)\GodotSharp.dll</HintPath><Private>true</Private></Reference>
+    <Reference Include="sts2"><HintPath>$(Sts2DataDir)\sts2.dll</HintPath><Private>true</Private></Reference>
+    <Reference Include="BaseLib"><HintPath>..\FullArtCardPacks\lib\BaseLib.dll</HintPath><Private>true</Private></Reference>
+  </ItemGroup>
+</Project>

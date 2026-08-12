@@ -24,56 +24,40 @@ internal static class PortraitPatch
     [HarmonyPatch(typeof(NCard), "UpdateVisuals")]
     private static void UpdateVisualsPostfix(NCard __instance, PileType pileType, CardPreviewMode previewMode)
     {
-        TryReplacePortrait(__instance);
+        TryReplacePortrait(__instance, EffectContext.From(__instance, pileType, previewMode));
     }
 
     [HarmonyPostfix]
     [HarmonyPatch(typeof(NCard), "_EnterTree")]
     private static void EnterTreePostfix(NCard __instance)
     {
-        TryReplacePortrait(__instance);
+        TryReplacePortrait(__instance, new EffectContext(EffectPresentation.Unknown));
     }
 
-    private static void TryReplacePortrait(NCard cardNode)
+    private static void TryReplacePortrait(NCard cardNode, EffectContext context)
     {
         CardModel? model = cardNode.Model;
-        if (model is null)
+        if (model is not null)
         {
-            return;
+            string cardId = model.GetType().FullName ?? model.GetType().Name;
+            if (TryGetReplacementTexture(cardId, out Texture2D? texture) && texture is not null)
+            {
+                GD.Print($"[FullArtCardPacks] Replacing portrait for {cardId}");
+                if (PortraitField?.GetValue(cardNode) is TextureRect portrait)
+                {
+                    portrait.Texture = texture;
+                    portrait.StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered;
+                }
+                if (AncientPortraitField?.GetValue(cardNode) is TextureRect ancientPortrait)
+                {
+                    ancientPortrait.Texture = texture;
+                    ancientPortrait.StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered;
+                    ancientPortrait.Visible = true;
+                }
+            }
         }
 
-        string cardId = model.GetType().FullName ?? model.GetType().Name;
-        if (!TryGetReplacementTexture(cardId, out Texture2D? texture) || texture is null)
-        {
-            return;
-        }
-
-        GD.Print($"[FullArtCardPacks] Replacing portrait for {cardId}");
-
-        if (PortraitField?.GetValue(cardNode) is TextureRect portrait)
-        {
-            portrait.Texture = texture;
-            portrait.StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered;
-            GD.Print($"[FullArtCardPacks]   Set _portrait texture");
-        }
-        else
-        {
-            GD.Print($"[FullArtCardPacks]   _portrait field is null or not a TextureRect");
-        }
-
-        if (AncientPortraitField?.GetValue(cardNode) is TextureRect ancientPortrait)
-        {
-            ancientPortrait.Texture = texture;
-            ancientPortrait.StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered;
-            ancientPortrait.Visible = true;
-            GD.Print($"[FullArtCardPacks]   Set _ancientPortrait texture");
-        }
-        else
-        {
-            GD.Print($"[FullArtCardPacks]   _ancientPortrait field is null or not a TextureRect");
-        }
-
-        CardEffectPatch.ApplyOrUpdate(cardNode);
+        CardEffectPatch.ApplyOrUpdate(cardNode, context);
     }
 
     private static bool TryGetReplacementTexture(string cardId, out Texture2D? texture)

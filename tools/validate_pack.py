@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -51,7 +52,9 @@ REQUIRED_EFFECT_FIELDS = {
     "rarity_flame": str,
     "surface": str,
     "rarity_policy": str,
-    "mask": str,
+    "effect_mask": str,
+    "protection_mask": str,
+    "permission_mask": str,
     "intensity": (int, float),
 }
 EXPECTED_EFFECT_VALUES = {
@@ -61,12 +64,10 @@ EXPECTED_EFFECT_VALUES = {
 ALLOWED_EFFECT_SURFACES = {
     "none",
     "shimmer",
-    "glow",
     "foil",
     "holo",
-    "reverse",
-    "etched",
     "prismatic",
+    "rainbow",
 }
 
 
@@ -217,7 +218,7 @@ def validate_effects_shape(label: str, effects: dict[str, Any], issues: list[str
         if not is_expected_type(value, expected_type):
             add_issue(issues, f"{label}: effects.{field} must be {type_name(expected_type)}")
             continue
-        if expected_type is str and not value.strip():
+        if expected_type is str and field not in {"effect_mask", "protection_mask", "permission_mask"} and not value.strip():
             add_issue(issues, f"{label}: effects.{field} must be a non-empty string")
 
     for field, expected_value in EXPECTED_EFFECT_VALUES.items():
@@ -248,6 +249,122 @@ def validate_mask_contents(label: str, mask_path: Path, mask: str, issues: list[
 
     if extrema[0] == extrema[1]:
         add_issue(issues, f"{label}: uniform mask {mask} ({extrema[0]})")
+
+
+def sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def validate_enabled_effect(
+    label: str,
+    effects: dict[str, Any],
+    release_root: Path,
+    release_art_path: Path | None,
+    allow_missing_masks: bool,
+    issues: list[str],
+    warnings: list[str],
+) -> int:
+    missing_masks = 0
+    audit = effects.get("audit")
+    if not isinstance(audit, dict):
+        add_issue(issues, f"{label}: enabled effects require an audit object")
+        audit = {}
+    if audit.get("review_status") != "approved":
+        add_issue(issues, f"{label}: enabled effects require audit.review_status 'approved'")
+    if audit.get("automated_status") not in {"candidate", "approved"}:
+        add_issue(issues, f"{label}: enabled effects require a passing automated_status")
+    coverage = audit.get("permitted_coverage")
+    if isinstance(coverage, bool) or not isinstance(coverage, (int, float)) or not 0 <= float(coverage) <= 0.75:
+        add_issue(issues, f"{label}: audit.permitted_coverage must be between 0 and 0.75")
+    phase_seed = effects.get("phase_seed")
+    if phase_seed is not None and (isinstance(phase_seed, bool) or not isinstance(phase_seed, (int, float))):
+        add_issue(issues, f"{label}: effects.phase_seed must be numeric or null")
+
+    dimensions = audit.get("dimensions")
+    if (
+        not isinstance(dimensions, list)
+        or len(dimensions) != 2
+        or any(isinstance(value, bool) or not isinstance(value, int) or value <= 0 for value in dimensions)
+    ):
+        add_issue(issues, f"{label}: audit.dimensions must contain two positive integers")
+        dimensions = None
+
+    mask_specs = (
+        ("effect_mask", True),
+        ("protection_mask", False),
+        ("permission_mask", True),
+    )
+    loaded_masks: dict[str, Any] = {}
+    for field, required in mask_specs:
+        mask = string_field(effects, field)
+        if required and not mask:
+            add_issue(issues, f"{label}: enabled effects require effects.{field}")
+            continue
+        if not mask:
+            continue
+        if not is_png_path(mask):
+            add_issue(issues, f"{label}: effects.{field} must point to a .png file")
+        mask_path = resolve_under_named_subdir(release_root, "effects", mask)
+        if mask_path is None:
+            missing_masks += 1
+            add_issue(issues, f"{label}: effects.{field} must be a relative path under effects/")
+            continue
+        if not mask_path.is_file():
+            missing_masks += 1
+            message = f"{label}: missing {field} {mask}"
+            add_issue(warnings if allow_missing_masks else issues, message)
+            continue
+        expected_hash = audit.get(f"{field}_sha256")
+        if not isinstance(expected_hash, str) or sha256_file(mask_path) != expected_hash:
+            add_issue(issues, f"{label}: audit hash does not match {field} {mask}")
+        try:
+            from PIL import Image
+
+            with Image.open(mask_path) as image:
+                loaded_masks[field] = image.convert("L")
+                if dimensions is not None and [image.width, image.height] != dimensions:
+                    add_issue(issues, f"{label}: {field} dimensions differ from audit")
+        except Exception as exc:
+            add_issue(issues, f"{label}: could not inspect {field} {mask}: {exc}")
+        if field == "permission_mask":
+            validate_mask_contents(label, mask_path, mask, issues)
+
+    if "effect_mask" in loaded_masks and "permission_mask" in loaded_masks:
+        from PIL import Image, ImageChops
+
+        effect_mask = loaded_masks["effect_mask"]
+        protection_mask = loaded_masks.get("protection_mask") or Image.new("L", effect_mask.size, 0)
+        permission_mask = loaded_masks["permission_mask"]
+        if protection_mask.size == effect_mask.size and permission_mask.size == effect_mask.size:
+            expected_permission = ImageChops.multiply(effect_mask, ImageChops.invert(protection_mask))
+            if ImageChops.difference(expected_permission, permission_mask).getbbox() is not None:
+                add_issue(issues, f"{label}: permission_mask does not equal effect_mask × inverse protection_mask")
+            pixel_count = permission_mask.width * permission_mask.height
+            measured_coverage = sum(
+                value >= 128 for value in permission_mask.get_flattened_data()
+            ) / pixel_count
+            if measured_coverage > 0.75:
+                add_issue(issues, f"{label}: measured permission coverage exceeds 0.75")
+            if isinstance(coverage, (int, float)) and not isinstance(coverage, bool):
+                if abs(measured_coverage - float(coverage)) > 1 / pixel_count:
+                    add_issue(
+                        issues,
+                        f"{label}: measured permission coverage does not match audit.permitted_coverage",
+                    )
+
+    if release_art_path is not None and release_art_path.is_file():
+        expected_art_hash = audit.get("final_art_sha256")
+        if not isinstance(expected_art_hash, str) or sha256_file(release_art_path) != expected_art_hash:
+            add_issue(issues, f"{label}: audit final_art_sha256 does not match released art")
+        try:
+            from PIL import Image
+
+            with Image.open(release_art_path) as image:
+                if dimensions is not None and [image.width, image.height] != dimensions:
+                    add_issue(issues, f"{label}: released art dimensions differ from audit")
+        except Exception as exc:
+            add_issue(issues, f"{label}: could not inspect released art: {exc}")
+    return missing_masks
 
 
 def validate_card(
@@ -292,6 +409,7 @@ def validate_card(
             add_issue(issues, f"{label}: missing repo_final_png {repo_final}")
 
     art = string_field(card, "art")
+    release_art_path: Path | None = None
     if art:
         if not starts_with_path_segment(art, "art"):
             add_issue(issues, f"{label}: art must start with art/")
@@ -319,26 +437,16 @@ def validate_card(
     validate_effects_shape(label, effects, issues)
     surface_enabled = is_effect_surface_enabled(effects)
 
-    mask_value = effects.get("mask")
-    mask = mask_value.strip() if isinstance(mask_value, str) else ""
-    if mask:
-        if not is_png_path(mask):
-            add_issue(issues, f"{label}: mask must point to a .png file")
-        mask_path = resolve_under(release_root, mask)
-        if mask_path is None:
-            missing_masks += 1
-            add_issue(issues, f"{label}: mask must be a relative path under --release-root")
-        elif not mask_path.is_file():
-            missing_masks += 1
-            message = f"{label}: missing mask {mask}"
-            if not surface_enabled:
-                pass
-            elif allow_missing_masks:
-                add_issue(warnings, message)
-            else:
-                add_issue(issues, message)
-        elif surface_enabled:
-            validate_mask_contents(label, mask_path, mask, issues)
+    if surface_enabled:
+        missing_masks += validate_enabled_effect(
+            label,
+            effects,
+            release_root,
+            release_art_path,
+            allow_missing_masks,
+            issues,
+            warnings,
+        )
 
     return missing_repo_final_art, missing_release_art, missing_masks
 
@@ -382,6 +490,12 @@ def validate_pack(
                 add_issue(issues, "roster.game_version must be a non-empty string")
             if not isinstance(roster.get("snapshot"), str) or not roster["snapshot"].strip():
                 add_issue(issues, "roster.snapshot must be a non-empty string")
+        for index, card in enumerate(pack.get("cards", []), start=1):
+            if isinstance(card, dict) and card.get("runtime_model_source") != "verified_game_roster":
+                add_issue(
+                    issues,
+                    f"{card_label(card, index)}: roster-backed packs require runtime_model_source 'verified_game_roster'",
+                )
     # Retired check
     for idx, card in enumerate(pack.get("cards", []), start=1):
         if isinstance(card, dict) and str(card.get("roster_status", "")).strip() == "retired":
@@ -457,7 +571,7 @@ def main() -> int:
         default=DEFAULT_RELEASE_ROOT,
         help="Standalone release root for art and effects paths.",
     )
-    parser.add_argument("--allow-missing-masks", action="store_true", help="Report but do not fail on missing masks.")
+    parser.add_argument("--allow-missing-masks", action="store_true", help="Development only: warn instead of fail for missing approved mask files; audit failures still fail.")
     parser.add_argument(
         "--allow-missing-release-art",
         action="store_true",
