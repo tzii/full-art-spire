@@ -498,8 +498,11 @@ def validate_pack(
                 )
     # Retired check
     for idx, card in enumerate(pack.get("cards", []), start=1):
-        if isinstance(card, dict) and str(card.get("roster_status", "")).strip() == "retired":
+        roster_status = str(card.get("roster_status", "")).strip() if isinstance(card, dict) else ""
+        if roster_status == "retired":
             add_issue(issues, f"{card_label(card, idx)}: retired runtime model")
+        elif roster_status == "unverified":
+            add_issue(issues, f"{card_label(card, idx)}: runtime model is not in the pinned roster snapshot")
 
     cards = validate_top_level_schema(pack, issues)
 
