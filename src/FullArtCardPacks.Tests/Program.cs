@@ -14,6 +14,29 @@ static void Near(float expected, float actual, float tolerance, string message)
 
 try
 {
+    Equal(EffectSurface.Shimmer, EffectFinishSelector.Select(EffectSurface.Holo, FinishAssignment.ByRarity, TrialFinish.Foil, "Common", "card", 0), "common receives satin");
+    Equal(EffectSurface.Foil, EffectFinishSelector.Select(EffectSurface.Holo, FinishAssignment.ByRarity, TrialFinish.Foil, "Uncommon", "card", 0), "uncommon receives foil");
+    Equal(EffectSurface.Prismatic, EffectFinishSelector.Select(EffectSurface.Holo, FinishAssignment.ByRarity, TrialFinish.Foil, "Rare", "card", 0), "rare receives prismatic");
+    Equal(EffectSurface.Holo, EffectFinishSelector.Select(EffectSurface.Holo, FinishAssignment.ByRarity, TrialFinish.Foil, "Ancient", "card", 0), "special rarity preserves authored finish");
+    Equal(EffectSurface.None, EffectFinishSelector.Select(EffectSurface.None, FinishAssignment.SingleFinish, TrialFinish.Ember, "Rare", "card", 0), "override cannot enable disabled art");
+    Equal(EffectSurface.Ember, EffectFinishSelector.Select(EffectSurface.Holo, FinishAssignment.SingleFinish, TrialFinish.Ember, "Rare", "card", 0), "single finish override");
+    Equal(EffectSurface.Holo, EffectFinishSelector.Select(EffectSurface.Holo, FinishAssignment.PackDefault, TrialFinish.Ember, "Rare", "card", 0), "authored finish preserved");
+    var randomFinishes = new HashSet<EffectSurface>();
+    for (int seed = 0; seed < 100; seed++)
+    {
+        var chosen = EffectFinishSelector.Select(EffectSurface.Foil, FinishAssignment.StableRandom, TrialFinish.Foil, "Rare", "card", seed);
+        Equal(chosen, EffectFinishSelector.Select(EffectSurface.Foil, FinishAssignment.StableRandom, TrialFinish.Foil, "Common", "card", seed), "random is stable independent of view or rarity");
+        if ((int)chosen < 1 || (int)chosen > 7) throw new Exception("random finish out of range");
+        randomFinishes.Add(chosen);
+    }
+    Equal(7, randomFinishes.Count, "seeds explore all finishes");
+    Near(0.25f, new EffectContext(EffectPresentation.Grid).IntensityScale, 0.0001f, "grid intensity is independent");
+    Near(0.5f, new EffectContext(EffectPresentation.Hand).IntensityScale, 0.0001f, "hand intensity is independent");
+    Near(0.75f, new EffectContext(EffectPresentation.Reward).IntensityScale, 0.0001f, "reward intensity is independent");
+    Near(1f, new EffectContext(EffectPresentation.Focused).IntensityScale, 0.0001f, "focus intensity is independent");
+    Near(0.25f, new EffectContext(EffectPresentation.Unknown).IntensityScale, 0.0001f, "unknown context stays conservative");
+    Equal(EffectSurface.None, EffectSurfaceParser.Parse("Ember"), "experimental finishes do not expand pack approval contract");
+    Equal(EffectSurface.Foil, EffectFinishSelector.Select(EffectSurface.Foil, (FinishAssignment)999, (TrialFinish)999, "Rare", "card", 0), "invalid settings preserve authored finish");
     Equal(EffectSurface.None, EffectSurfaceParser.Parse("unknown"), "unknown surfaces fail closed");
     Equal(EffectSurface.Holo, EffectSurfaceParser.Parse("HOLO"), "surface parsing is case-insensitive");
     Equal(3, EffectSurfaceParser.ShaderId(EffectSurface.Holo), "surface shader IDs are stable");
@@ -36,7 +59,7 @@ try
         _ => resourceWarnings++);
     Equal<object?>(null, failedResource, "resource failures return null");
     Equal(1, resourceWarnings, "resource failure warns once");
-    Console.WriteLine("Effect contract tests passed: 12 assertions");
+    Console.WriteLine("Effect contract and finish assignment tests passed");
     return 0;
 }
 catch (Exception ex)

@@ -45,6 +45,7 @@ internal static class FullArtPackRegistry
     {
         return !string.IsNullOrWhiteSpace(runtimeModel)
             && CardsByRuntimeModel.TryGetValue(runtimeModel, out FullArtCardEntry? entry)
+            && !entry.PreserveOriginalLayout
             && !string.IsNullOrWhiteSpace(entry.Art)
             && TryResolveModPath(entry.Art, out string artPath)
             && File.Exists(artPath);

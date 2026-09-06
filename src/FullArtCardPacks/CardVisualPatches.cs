@@ -65,6 +65,7 @@ internal static class PortraitPatch
         texture = null;
         return FullArtPackRegistry.TryGetCard(cardId, out FullArtCardEntry? entry)
             && entry is not null
+            && !entry.PreserveOriginalLayout
             && TextureCache.TryGetTexture(entry, out texture);
     }
 }

@@ -44,6 +44,9 @@ internal sealed record FullArtCardEntry
     [JsonPropertyName("art")]
     public string Art { get; init; } = "";
 
+    [JsonPropertyName("preserve_original_layout")]
+    public bool PreserveOriginalLayout { get; init; }
+
     [JsonPropertyName("effects")]
     public FullArtEffectMetadata? Effects { get; init; } = new();
 }

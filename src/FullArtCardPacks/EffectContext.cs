@@ -58,4 +58,12 @@ internal readonly record struct EffectContext(EffectPresentation Presentation)
             => Math.Clamp(FullArtModConfig.FocusedMotion, 0f, 1f),
         _ => -1f,
     };
+
+    internal float IntensityScale => Math.Clamp(Presentation switch
+    {
+        EffectPresentation.Hand => FullArtModConfig.HandIntensity,
+        EffectPresentation.Reward => FullArtModConfig.RewardIntensity,
+        EffectPresentation.Focused => FullArtModConfig.FocusedIntensity,
+        _ => FullArtModConfig.GridIntensity,
+    }, 0f, 1f);
 }

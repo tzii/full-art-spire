@@ -60,9 +60,9 @@ internal static class EffectRenderer
             material.Shader = _effectShader;
             material.SetShaderParameter("permission_mask_texture", permissionMask);
             material.SetShaderParameter("surface_type", EffectSurfaceParser.ShaderId(decision.Surface));
-            material.SetShaderParameter("intensity", decision.Intensity);
+            material.SetShaderParameter("intensity", decision.Intensity * context.IntensityScale);
             material.SetShaderParameter("phase", decision.Phase);
-            material.SetShaderParameter("motion_scale", motionScale);
+            material.SetShaderParameter("motion_scale", FullArtModConfig.ReducedMotion ? 0f : motionScale);
             return material;
         }
         catch (Exception ex)

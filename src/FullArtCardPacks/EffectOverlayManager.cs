@@ -7,6 +7,8 @@ internal static class EffectOverlayManager
 {
     private const string OverlayName = "_full_art_effect_overlay";
     private const string TrackedCardGroup = "full_art_card_packs_seen_cards";
+    private const string OverlayGroup = "full_art_card_packs_effect_overlays";
+    private static ulong _dimmingTreeId;
     private static readonly StringName PresentationMetadata = "full_art_card_packs_effect_presentation";
 
     internal static void ApplyOrUpdate(NCard cardNode, EffectContext context)
@@ -91,10 +93,33 @@ internal static class EffectOverlayManager
             MouseFilter = Control.MouseFilterEnum.Ignore,
             ShowBehindParent = false,
             ZIndex = 1,
+            SelfModulate = portrait.SelfModulate,
         };
         portrait.AddChild(overlay);
+        overlay.AddToGroup(OverlayGroup);
+        // Signal delegates work without source-generated user callbacks.
+        // One tree-owned subscription retains no card or portrait nodes.
+        if (Engine.GetMainLoop() is SceneTree tree && tree.GetInstanceId() != _dimmingTreeId)
+        {
+            tree.ProcessFrame += RefreshOverlayDimming;
+            _dimmingTreeId = tree.GetInstanceId();
+        }
         overlay.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         return overlay;
+    }
+
+    private static void RefreshOverlayDimming()
+    {
+        if (Engine.GetMainLoop() is not SceneTree tree) return;
+        foreach (Node node in tree.GetNodesInGroup(OverlayGroup))
+        {
+            if (node is TextureRect overlay && !overlay.IsQueuedForDeletion()
+                && overlay.IsVisibleInTree() && overlay.GetParent() is CanvasItem portrait)
+            {
+                // Modulate is inherited; copying it here would dim twice.
+                overlay.SelfModulate = portrait.SelfModulate;
+            }
+        }
     }
 
     private static TextureRect? FindOverlay(TextureRect portrait)

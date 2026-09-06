@@ -43,6 +43,8 @@ internal static class EffectPolicy
         }
 
         float intensity = EffectSettings.EffectiveIntensity(effects.Intensity, FullArtModConfig.EffectIntensity);
+        surface = EffectFinishSelector.Select(surface, FullArtModConfig.FinishAssignment,
+            FullArtModConfig.SingleFinish, model.Rarity.ToString(), entry.RuntimeModel, FullArtModConfig.FinishSeed);
         float phase = EffectSettings.PhaseFor(entry.RuntimeModel, effects.PhaseSeed);
         return new(intensity > 0f, surface, intensity, phase, permissionMask);
     }

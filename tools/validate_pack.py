@@ -169,6 +169,8 @@ def string_field(card: dict[str, Any], field: str) -> str:
 
 
 def validate_card_scalar_fields(label: str, card: dict[str, Any], issues: list[str]) -> None:
+    if "preserve_original_layout" in card and not isinstance(card["preserve_original_layout"], bool):
+        add_issue(issues, f"{label}: preserve_original_layout must be a boolean")
     for field in REQUIRED_CARD_SCALAR_FIELDS:
         value = card.get(field)
         if not isinstance(value, str) or not value.strip():

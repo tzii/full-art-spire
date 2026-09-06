@@ -7,6 +7,9 @@ internal enum EffectSurface
     Foil = 2,
     Holo = 3,
     Prismatic = 4,
+    BrushedSilver = 5,
+    Ember = 6,
+    Frost = 7,
 }
 
 internal static class EffectSurfaceParser
@@ -20,7 +23,7 @@ internal static class EffectSurfaceParser
         }
 
         return Enum.TryParse(normalized, true, out EffectSurface parsed)
-            && Enum.IsDefined(parsed)
+            && parsed is >= EffectSurface.None and <= EffectSurface.Prismatic
             ? parsed
             : EffectSurface.None;
     }

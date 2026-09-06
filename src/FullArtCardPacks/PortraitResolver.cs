@@ -27,6 +27,12 @@ internal static class PortraitResolver
             }
         }
 
+        if (FullArtPackRegistry.TryGetCard(cardNode.Model?.GetType().FullName, out FullArtCardEntry? entry)
+            && entry is not null && entry.PreserveOriginalLayout)
+        {
+            return PortraitField?.GetValue(cardNode) as TextureRect;
+        }
+
         if (AncientPortraitField?.GetValue(cardNode) is TextureRect ancient && ancient.Visible)
         {
             return ancient;
