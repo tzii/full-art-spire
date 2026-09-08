@@ -40,6 +40,18 @@ internal static class EffectOverlayManager
             return;
         }
 
+        // Native portraits can be AtlasTextures: their UVs address the atlas,
+        // while permission masks address the exported portrait's 0..1 space.
+        // Use the audited export only for the overlay, preserving native art
+        // and layout on the parent TextureRect. Missing exports fail closed.
+        Texture2D? overlayTexture = portrait.Texture;
+        if (entry.PreserveOriginalLayout
+            && (!TextureCache.TryGetTexture(entry, out overlayTexture) || overlayTexture is null))
+        {
+            Clear(cardNode);
+            return;
+        }
+
         TextureRect overlay = FindOverlay(portrait) ?? CreateOverlay(portrait);
         ClearInactivePortraits(cardNode, portrait);
         ShaderMaterial? material = EffectRenderer.CreateOrUpdateEffectMaterial(
@@ -53,7 +65,7 @@ internal static class EffectOverlayManager
             return;
         }
 
-        overlay.Texture = portrait.Texture;
+        overlay.Texture = overlayTexture;
         overlay.ExpandMode = portrait.ExpandMode;
         overlay.StretchMode = portrait.StretchMode;
         overlay.Material = material;
