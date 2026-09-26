@@ -94,7 +94,28 @@ internal static class LayerPolicyTests
         Require(!LayerPolicy.CanComposite(0f), "fully faded cards have no layer draw");
         Require(!LayerPolicy.CanComposite(float.NaN), "invalid opacity fails closed");
         TestMasks(layers, entry);
+        TestCanvases();
         Console.WriteLine("Layered card policy tests passed");
+    }
+
+    private static void TestCanvases()
+    {
+        foreach (var size in new[] { (64, 96), (1024, 1536), (2730, 4095) })
+            foreach (bool masked in new[] { false, true })
+                Require(LayerPolicy.IsValidCanvas(size.Item1, size.Item2, masked),
+                    $"old 2:3 canvas {size} remains valid, masked={masked}");
+        foreach (var size in new[] { (606, 852), (1023, 1537), (1365, 2048), (1029, 1528), (64, 65), (2729, 4096) })
+        {
+            Require(LayerPolicy.IsValidCanvas(size.Item1, size.Item2, true),
+                $"matching masked original portrait canvas {size} accepted");
+            Require(!LayerPolicy.IsValidCanvas(size.Item1, size.Item2, false),
+                $"unmasked RGBA {size} cannot bypass the established 2:3 contract");
+        }
+        foreach (var size in new[] { (0, 0), (-64, -96), (63, 96), (96, 96), (144, 96),
+            (2731, 4095), (64, 4097), (2730, 4096), (int.MaxValue, int.MaxValue), (64, int.MinValue) })
+            foreach (bool masked in new[] { false, true })
+                Require(!LayerPolicy.IsValidCanvas(size.Item1, size.Item2, masked),
+                    $"invalid, landscape or over-budget canvas {size} rejected, masked={masked}");
     }
 
     private static void TestMasks(FullArtLayerMetadata layers, FullArtCardEntry entry)

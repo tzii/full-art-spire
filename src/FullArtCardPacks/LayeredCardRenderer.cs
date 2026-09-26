@@ -36,7 +36,7 @@ internal static class LayeredCardRenderer
                 || !LayerPolicy.TryDecide(entry, FullArtModConfig.EnableLayeredCards,
                     cardNode.Visibility == ModelVisibility.Visible, FullArtModConfig.LayerDepth, out var decision)
                 || PortraitResolver.Resolve(cardNode) is not { Texture: not null } portrait
-                || LoadTextures(entry.Layers!) is not { } textures
+                || LoadTextures(entry) is not { } textures
                 || LoadShader() is not { } shader)
             {
                 Clear(cardNode);
@@ -99,8 +99,9 @@ internal static class LayeredCardRenderer
         return _shader;
     }
 
-    private static LayerTextures? LoadTextures(FullArtLayerMetadata layers)
+    private static LayerTextures? LoadTextures(FullArtCardEntry entry)
     {
+        FullArtLayerMetadata layers = entry.Layers!;
         if (!FullArtPackRegistry.TryResolveModPath(layers.Background, out string backgroundPath)
             || !FullArtPackRegistry.TryResolveModPath(layers.Foreground, out string foregroundPath))
             return null;
@@ -115,6 +116,13 @@ internal static class LayeredCardRenderer
         Texture2D? maskTexture = null;
         if (useMask && !TextureCache.TryLoadPath(layers.ForegroundMask, out maskTexture))
             return null;
+        // Existing generated RGBA and masked 2:3 packs keep their contract.
+        // A newly admitted original canvas must use the very same source as
+        // the flat portrait, so both TextureRects inherit an identical crop.
+        if (foregroundTexture!.GetWidth() * 3L != foregroundTexture.GetHeight() * 2L
+            && (!useMask || !FullArtPackRegistry.TryResolveModPath(entry.Art, out string artPath)
+                || !string.Equals(artPath, foregroundPath, StringComparison.OrdinalIgnoreCase)))
+            return null;
         var validationKey = new ValidationKey(backgroundTexture!.GetInstanceId(), foregroundTexture!.GetInstanceId(),
             maskTexture?.GetInstanceId() ?? 0, layers.ForegroundMaskChannel);
         var textures = new LayerTextures(backgroundTexture, foregroundTexture, maskTexture);
@@ -128,11 +136,10 @@ internal static class LayeredCardRenderer
                 throw new InvalidDataException("A required foreground mask could not be decoded.");
             if (background.IsEmpty() || foreground.IsEmpty()
                 || background.GetSize() != foreground.GetSize()
-                || background.GetWidth() * 3 != background.GetHeight() * 2
-                || background.GetWidth() < 64 || background.GetHeight() > 4096
+                || !LayerPolicy.IsValidCanvas(background.GetWidth(), background.GetHeight(), useMask)
                 || background.DetectAlpha() != Image.AlphaMode.None
                 || (!useMask && foreground.DetectAlpha() == Image.AlphaMode.None) || foreground.IsInvisible())
-                throw new InvalidDataException("Layers require matching 2:3 images, an opaque background, and a visible transparent foreground.");
+                throw new InvalidDataException("Layers require matching bounded portrait canvases, an opaque background, and visible coverage; unmasked RGBA layers require 2:3.");
             if (mask is not null)
             {
                 if (mask.IsEmpty() || mask.GetSize() != foreground.GetSize())

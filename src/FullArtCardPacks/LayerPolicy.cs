@@ -54,6 +54,17 @@ internal static class LayerPolicy
     internal static bool CanComposite(float opacity)
         => float.IsFinite(opacity) && opacity >= 0.9999f;
 
+    internal static bool IsValidCanvas(int width, int height, bool hasMask)
+    {
+        // Exact 2:3 integer canvases previously topped out at 2730x4095.
+        // A separate mask may retain another original portrait aspect ratio,
+        // without increasing either the width or total texture-pixel budget.
+        if (width < 64 || width > 2730 || height <= width || height > 4096
+            || (long)width * height > 2730L * 4095)
+            return false;
+        return hasMask || (long)width * 3 == (long)height * 2;
+    }
+
     internal static bool IsRelativeImagePath(string? path)
     {
         if (string.IsNullOrWhiteSpace(path) || Path.IsPathRooted(path)
