@@ -238,13 +238,25 @@ internal static class LayeredCardRenderer
         }
         overlay.Visible = portrait.Visible && LayerPolicy.CanComposite(opacity);
         if (overlay.Material is not ShaderMaterial material) return;
+        // Pooled cards are refreshed before they enter a SceneTree. Godot's
+        // local mouse query requires a viewport, including when motion would
+        // otherwise be discarded. Clear any previous pose until both nodes
+        // are attached again; do not cache attachment or transformed positions.
+        Vector2 pointer = Vector2.Zero;
         Vector2 size = portrait.Size;
-        Vector2 position = portrait.GetLocalMousePosition();
-        var pointer = size.X > 0f && size.Y > 0f
-            ? LayerPolicy.Pointer(position.X / size.X * 2f - 1f, position.Y / size.Y * 2f - 1f,
-                FullArtModConfig.ReducedMotion)
-            : (X: 0f, Y: 0f);
-        material.SetShaderParameter("pointer", new Vector2(pointer.X, pointer.Y));
+        float depth = material.GetShaderParameter("depth").AsSingle();
+        if (!FullArtModConfig.ReducedMotion && float.IsFinite(depth) && depth > 0f
+            && float.IsFinite(size.X) && float.IsFinite(size.Y) && size.X > 0f && size.Y > 0f
+            && portrait.IsInsideTree() && overlay.IsInsideTree() && overlay.GetParent() == portrait
+            && portrait.GetViewport() is { } viewport && GodotObject.IsInstanceValid(viewport)
+            && overlay.GetViewport() == viewport)
+        {
+            Vector2 position = portrait.GetLocalMousePosition();
+            var normalized = LayerPolicy.Pointer(position.X / size.X * 2f - 1f,
+                position.Y / size.Y * 2f - 1f, false);
+            pointer = new Vector2(normalized.X, normalized.Y);
+        }
+        material.SetShaderParameter("pointer", pointer);
     }
 
     private static TextureRect? Find(TextureRect portrait)
