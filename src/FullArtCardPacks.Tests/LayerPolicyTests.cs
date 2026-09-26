@@ -1,17 +1,24 @@
+using System.Text.Json;
 using FullArtCardPacks;
 
 internal static class LayerPolicyTests
 {
     internal static void Run()
     {
-        var layers = new FullArtLayerMetadata
-        {
-            Background = "layers/silent/survivor/background.png",
-            Foreground = "layers/silent/survivor/foreground.png",
-        };
+        var layers = JsonSerializer.Deserialize<FullArtLayerMetadata>("""
+            {
+                "background": "layers/silent/survivor/background.png",
+                "foreground": "layers/silent/survivor/foreground.png"
+            }
+            """)!;
         var entry = new FullArtCardEntry { Layers = layers };
         Require(LayerPolicy.TryDecide(entry, true, true, 0.5f, out var decision), "valid pilot enabled");
         Require(decision.Depth == 0.5f, "global depth scales authored depth");
+        Require(decision.SubjectScale == 1f && decision.SubjectOffsetX == 0f && decision.SubjectOffsetY == 0f,
+            "legacy metadata retains identity subject placement");
+        Require(decision.BackgroundShift == 0.010f && decision.ForegroundShift == 0.022f
+            && decision.ForegroundScale == 1.035f && decision.ShadowStrength == 0.28f && decision.FrameInset == 0.055f,
+            "legacy motion, shadow, and trim defaults remain unchanged");
         Require(LayerPolicy.TryDecide(entry, true, true, 0f, out decision) && decision.Depth == 0f,
             "zero depth retains a static separated composition");
         Require(LayerPolicy.TryDecide(entry, true, true, 9f, out decision) && decision.Depth == 1f,
@@ -22,6 +29,51 @@ internal static class LayerPolicyTests
             "native layout remains native");
         Require(!LayerPolicy.TryDecide(entry with { Layers = null }, true, true, 1f, out _), "no guessed layers");
         Require(!LayerPolicy.TryDecide(entry, true, true, float.NaN, out _), "invalid global settings fail closed");
+        var positioned = JsonSerializer.Deserialize<FullArtLayerMetadata>("""
+            {
+                "background": "layers/silent/survivor/background.png",
+                "foreground": "layers/silent/survivor/foreground.png",
+                "depth": 0.8,
+                "subject_scale": 0.625,
+                "subject_offset_x": -0.125,
+                "subject_offset_y": 0.375
+            }
+            """)!;
+        foreach (var (globalDepth, expectedDepth) in new[] { (0f, 0f), (0.25f, 0.2f), (1f, 0.8f), (9f, 0.8f), (-1f, 0f) })
+        {
+            Require(LayerPolicy.TryDecide(entry with { Layers = positioned }, true, true, globalDepth, out decision),
+                $"authored subject placement accepted at global depth {globalDepth}");
+            Require(decision.Depth == expectedDepth && decision.ForegroundScale == 1.035f,
+                "static placement preserves authored depth and lift");
+            Require(decision.SubjectScale == 0.625f && decision.SubjectOffsetX == -0.125f && decision.SubjectOffsetY == 0.375f,
+                "JSON subject placement survives independently of global depth");
+        }
+        foreach (var boundary in new[]
+        {
+            layers with { SubjectScale = 0.25f, SubjectOffsetX = -0.5f, SubjectOffsetY = 0.5f },
+            layers with { SubjectScale = 1.5f, SubjectOffsetX = 0.5f, SubjectOffsetY = -0.5f },
+        })
+        {
+            Require(LayerPolicy.TryDecide(entry with { Layers = boundary }, true, true, 1f, out decision),
+                "subject placement endpoints are inclusive");
+            Require(decision.SubjectScale == boundary.SubjectScale && decision.SubjectOffsetX == boundary.SubjectOffsetX
+                && decision.SubjectOffsetY == boundary.SubjectOffsetY, "valid placement is not clamped or recentered");
+        }
+        foreach (float invalid in new[]
+        {
+            0f, -1f, MathF.BitDecrement(0.25f), MathF.BitIncrement(1.5f),
+            float.NaN, float.NegativeInfinity, float.PositiveInfinity,
+        })
+            RequireInvalidPlacement(entry, layers with { SubjectScale = invalid }, $"subject scale {invalid}");
+        foreach (float invalid in new[]
+        {
+            MathF.BitDecrement(-0.5f), MathF.BitIncrement(0.5f),
+            float.NaN, float.NegativeInfinity, float.PositiveInfinity,
+        })
+        {
+            RequireInvalidPlacement(entry, layers with { SubjectOffsetX = invalid }, $"subject X offset {invalid}");
+            RequireInvalidPlacement(entry, layers with { SubjectOffsetY = invalid }, $"subject Y offset {invalid}");
+        }
         FullArtLayerMetadata[] malformed =
         {
             layers with { Background = "" }, layers with { Foreground = layers.Background },
@@ -41,7 +93,108 @@ internal static class LayerPolicyTests
         Require(!LayerPolicy.CanComposite(0.5f), "native fades use flat fallback without double opacity");
         Require(!LayerPolicy.CanComposite(0f), "fully faded cards have no layer draw");
         Require(!LayerPolicy.CanComposite(float.NaN), "invalid opacity fails closed");
+        TestMasks(layers, entry);
         Console.WriteLine("Layered card policy tests passed");
+    }
+
+    private static void TestMasks(FullArtLayerMetadata layers, FullArtCardEntry entry)
+    {
+        Require(layers.ForegroundMask == "", "legacy metadata has no foreground mask");
+        Require(layers.ForegroundMaskChannel == "red", "legacy mask channel defaults to red");
+        var masked = JsonSerializer.Deserialize<FullArtLayerMetadata>("""
+            {"background":"layers/card/background.png", "foreground":"art/card.png",
+             "foreground_mask":"layers/card/mask.png"}
+            """)!;
+        Require(masked.ForegroundMask == "layers/card/mask.png"
+            && LayerPolicy.TryDecide(entry with { Layers = masked }, true, true, 1f, out _),
+            "JSON mask path selects the optional mask route");
+        foreach (string? invalid in new string?[]
+        {
+            null, " ", "../mask.png", "layers/../mask.png", "layers/.. /mask.png", "C:/mask.png",
+            "/mask.png", "\\\\server\\mask.png", "file://mask.png", "layers//mask.png", "layers/mask.jpg",
+            "layers/mask.png\0", layers.Background, layers.Foreground.Replace('/', '\\'),
+        })
+            Require(!LayerPolicy.TryDecide(entry with { Layers = layers with { ForegroundMask = invalid! } },
+                true, true, 1f, out _), $"invalid mask path fails closed: {invalid ?? "null"}");
+
+        byte[] mask = MaskBytes(16, index => (byte)(index < 8 ? 255 : 0));
+        byte[] foreground = MaskBytes(16, _ => 255);
+        Require(LayerPolicy.IsValidForegroundMask(mask, foreground, 4, 4), "opaque cutout mask accepted");
+        Require(!LayerPolicy.IsValidForegroundMask(mask, foreground, 4, 5), "mask canvas byte count must match");
+        Require(!LayerPolicy.IsValidForegroundMask(mask, foreground.AsSpan(0, 60), 4, 4), "foreground canvas must match mask");
+        Require(!LayerPolicy.IsValidForegroundMask(mask, foreground, int.MaxValue, int.MaxValue), "mask dimensions cannot overflow");
+        foreach (byte level in new byte[] { 0, 128, 255 })
+            Require(!LayerPolicy.IsValidForegroundMask(MaskBytes(16, _ => level), foreground, 4, 4),
+                $"flat mask {level} cannot reveal the source canvas");
+        byte[] invalidAlpha = (byte[])mask.Clone();
+        invalidAlpha[3] = 254;
+        Require(!LayerPolicy.IsValidForegroundMask(invalidAlpha, foreground, 4, 4), "mask alpha must be fully opaque");
+        byte[] nearGray = (byte[])mask.Clone();
+        nearGray[1] = 239;
+        Require(LayerPolicy.IsValidForegroundMask(nearGray, foreground, 4, 4), "16-level RGB spread is tolerated");
+        nearGray[1] = 238;
+        Require(!LayerPolicy.IsValidForegroundMask(nearGray, foreground, 4, 4), "greater RGB spread rejects colored masks");
+        byte[] sourceAlpha = (byte[])foreground.Clone();
+        for (int index = 3; index < sourceAlpha.Length; index += 4) sourceAlpha[index] = 128;
+        Require(LayerPolicy.IsValidForegroundMask(mask, sourceAlpha, 4, 4), "partial source alpha can multiply the mask");
+        for (int index = 3; index < 8 * 4; index += 4) sourceAlpha[index] = 0;
+        Require(!LayerPolicy.IsValidForegroundMask(mask, sourceAlpha, 4, 4), "mask must overlap visible source alpha");
+        byte[] largeSource = MaskBytes(2000, _ => 255);
+        Require(!LayerPolicy.IsValidForegroundMask(MaskBytes(2000, index => (byte)(index == 0 ? 255 : 0)),
+            largeSource, 40, 50), "single visible speck is not a meaningful foreground");
+        Require(LayerPolicy.IsValidForegroundMask(MaskBytes(2000, index => (byte)(index < 2 ? 255 : 0)),
+            largeSource, 40, 50), "0.1 percent visible-region boundary is inclusive");
+        Require(!LayerPolicy.IsValidForegroundMask(MaskBytes(2000, index => (byte)(index == 0 ? 0 : 255)),
+            largeSource, 40, 50), "single hidden speck is not a meaningful cutout");
+        foreach (string? invalid in new string?[] { null, "", "green", "Alpha", "RED", " alpha " })
+        {
+            Require(!LayerPolicy.TryDecide(entry with { Layers = masked with { ForegroundMaskChannel = invalid! } },
+                true, true, 1f, out _), $"unknown mask channel fails closed: {invalid ?? "null"}");
+            Require(!LayerPolicy.IsValidForegroundMask(mask, foreground, 4, 4, invalid!),
+                "unknown mask channel cannot reach a sampler");
+        }
+        var alphaMetadata = JsonSerializer.Deserialize<FullArtLayerMetadata>("""
+            {"background":"layers/card/background.png", "foreground":"art/card.png",
+             "foreground_mask":"layers/card/subject.png", "foreground_mask_channel":"alpha"}
+            """)!;
+        Require(alphaMetadata.ForegroundMaskChannel == "alpha"
+            && LayerPolicy.TryDecide(entry with { Layers = alphaMetadata }, true, true, 1f, out _),
+            "JSON alpha channel is explicit");
+        byte[] alphaMask = MaskBytes(16, _ => 0);
+        for (int index = 0; index < 16; index++)
+        {
+            alphaMask[index * 4] = 255;
+            alphaMask[index * 4 + 1] = 0;
+            alphaMask[index * 4 + 2] = 200;
+            alphaMask[index * 4 + 3] = (byte)(index < 8 ? 254 : 0);
+        }
+        Require(LayerPolicy.IsValidForegroundMask(alphaMask, foreground, 4, 4, "alpha"),
+            "colored cutout RGB is irrelevant when alpha has meaningful visible and hidden regions");
+        Require(!LayerPolicy.IsValidForegroundMask(alphaMask, foreground, 4, 4, "red"),
+            "alpha cutout cannot accidentally use the red-mask contract");
+        Require(!LayerPolicy.IsValidForegroundMask(mask, foreground, 4, 4, "alpha"),
+            "opaque RGB-style mask cannot supply alpha coverage");
+        Require(!LayerPolicy.IsValidForegroundMask(alphaMask, sourceAlpha, 4, 4, "alpha"),
+            "alpha mask must overlap visible source alpha");
+    }
+
+    private static byte[] MaskBytes(int pixels, Func<int, byte> luminance)
+    {
+        var bytes = new byte[pixels * 4];
+        for (int index = 0; index < pixels; index++)
+        {
+            byte level = luminance(index);
+            bytes[index * 4] = bytes[index * 4 + 1] = bytes[index * 4 + 2] = level;
+            bytes[index * 4 + 3] = 255;
+        }
+        return bytes;
+    }
+
+    private static void RequireInvalidPlacement(FullArtCardEntry entry, FullArtLayerMetadata layers, string message)
+    {
+        Require(!LayerPolicy.TryDecide(entry with { Layers = layers }, true, true, 1f, out var decision),
+            $"{message} must fall back to flat art");
+        Require(decision == default, $"{message} must not leak an invalid shader decision");
     }
 
     private static void Require(bool value, string message)

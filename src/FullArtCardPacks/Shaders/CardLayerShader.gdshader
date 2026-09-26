@@ -2,11 +2,18 @@ shader_type canvas_item;
 render_mode unshaded, blend_mix;
 
 uniform sampler2D foreground_texture : source_color, filter_linear, repeat_disable;
+// The mask is data: no source_color hint or sRGB conversion.
+uniform sampler2D foreground_mask_texture : filter_linear, repeat_disable;
+uniform bool use_foreground_mask = false;
+uniform bool foreground_mask_use_alpha = false;
 uniform vec2 pointer = vec2(0.0);
 uniform float depth : hint_range(0.0, 1.0) = 1.0;
 uniform float background_shift = 0.010;
 uniform float foreground_shift = 0.022;
 uniform float foreground_scale = 1.035;
+uniform float subject_scale : hint_range(0.25, 1.5) = 1.0;
+uniform float subject_offset_x : hint_range(-0.5, 0.5) = 0.0;
+uniform float subject_offset_y : hint_range(-0.5, 0.5) = 0.0;
 uniform float shadow_strength = 0.28;
 uniform float frame_inset = 0.055;
 
@@ -21,7 +28,15 @@ float inside_canvas(vec2 uv) {
 }
 
 float foreground_alpha(vec2 uv) {
-    return texture(foreground_texture, clamp(uv, vec2(0.0), vec2(1.0))).a * inside_canvas(uv);
+    // Preserve the established RGBA arithmetic exactly when no mask is enabled.
+    if (!use_foreground_mask) {
+        return texture(foreground_texture, clamp(uv, vec2(0.0), vec2(1.0))).a * inside_canvas(uv);
+    }
+    vec2 sample_uv = clamp(uv, vec2(0.0), vec2(1.0));
+    vec4 mask = texture(foreground_mask_texture, sample_uv);
+    float coverage = foreground_mask_use_alpha ? mask.a : mask.r;
+    float alpha = texture(foreground_texture, sample_uv).a * coverage;
+    return alpha * inside_canvas(uv);
 }
 
 void fragment() {
@@ -45,7 +60,9 @@ void fragment() {
     background = mix(background, trim, frame * 0.80);
 
     float lift = mix(1.0, foreground_scale, depth);
-    vec2 subject_uv = (UV - 0.5 - travel * foreground_shift) / lift + 0.5;
+    // Static placement is independent of pointer travel and depth, including
+    // reduced motion. Positive offsets move the subject right and down.
+    vec2 subject_uv = (UV - 0.5 - travel * foreground_shift - vec2(subject_offset_x, subject_offset_y)) / (subject_scale * lift) + 0.5;
     vec2 cast_offset = vec2(0.007, 0.010) * (0.3 + depth * 0.7) - travel * 0.005;
     vec2 shadow_uv = subject_uv - cast_offset;
     vec2 blur = vec2(0.0035, 0.0023);
@@ -61,6 +78,10 @@ void fragment() {
     background *= 1.0 - shadow * shadow_strength;
 
     vec4 subject = texture(foreground_texture, clamp(subject_uv, vec2(0.0), vec2(1.0)));
+    if (use_foreground_mask) {
+        vec4 mask = texture(foreground_mask_texture, clamp(subject_uv, vec2(0.0), vec2(1.0)));
+        subject.a *= foreground_mask_use_alpha ? mask.a : mask.r;
+    }
     subject.a *= inside_canvas(subject_uv);
     vec3 composite = mix(background, subject.rgb, subject.a);
     COLOR = vec4(composite * card_modulate.rgb, card_modulate.a);

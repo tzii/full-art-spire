@@ -14,7 +14,7 @@ internal static class LayeredCardRenderer
     private static bool _shaderAttempted;
     private static ulong _processTreeId;
 
-    private sealed record LayerTextures(Texture2D Background, Texture2D Foreground);
+    private sealed record LayerTextures(Texture2D Background, Texture2D Foreground, Texture2D? ForegroundMask);
 
     internal static void ApplyOrUpdate(NCard cardNode)
     {
@@ -39,10 +39,16 @@ internal static class LayeredCardRenderer
             var material = overlay.Material as ShaderMaterial ?? new ShaderMaterial();
             material.Shader = shader;
             material.SetShaderParameter("foreground_texture", textures.Foreground);
+            material.SetShaderParameter("foreground_mask_texture", textures.ForegroundMask ?? textures.Foreground);
+            material.SetShaderParameter("use_foreground_mask", textures.ForegroundMask is not null);
+            material.SetShaderParameter("foreground_mask_use_alpha", entry.Layers!.ForegroundMaskChannel == "alpha");
             material.SetShaderParameter("depth", decision.Depth);
             material.SetShaderParameter("background_shift", decision.BackgroundShift);
             material.SetShaderParameter("foreground_shift", decision.ForegroundShift);
             material.SetShaderParameter("foreground_scale", decision.ForegroundScale);
+            material.SetShaderParameter("subject_scale", decision.SubjectScale);
+            material.SetShaderParameter("subject_offset_x", decision.SubjectOffsetX);
+            material.SetShaderParameter("subject_offset_y", decision.SubjectOffsetY);
             material.SetShaderParameter("shadow_strength", decision.ShadowStrength);
             material.SetShaderParameter("frame_inset", decision.FrameInset);
             overlay.Material = material;
@@ -87,23 +93,42 @@ internal static class LayeredCardRenderer
         if (!FullArtPackRegistry.TryResolveModPath(layers.Background, out string backgroundPath)
             || !FullArtPackRegistry.TryResolveModPath(layers.Foreground, out string foregroundPath))
             return null;
-        string key = backgroundPath + "\n" + foregroundPath;
+        bool useMask = layers.ForegroundMask.Length != 0;
+        string maskPath = "";
+        if (useMask && !FullArtPackRegistry.TryResolveModPath(layers.ForegroundMask, out maskPath))
+            return null;
+        string key = backgroundPath + "\n" + foregroundPath + "\n" + maskPath + "\n" + layers.ForegroundMaskChannel;
         if (Cache.TryGetValue(key, out var cached)) return cached;
         LayerTextures? result = null;
         try
         {
-            if (!File.Exists(backgroundPath) || !File.Exists(foregroundPath))
-                throw new InvalidDataException("A required clean plate or foreground is missing.");
+            if (!File.Exists(backgroundPath) || !File.Exists(foregroundPath) || (useMask && !File.Exists(maskPath)))
+                throw new InvalidDataException("A required clean plate, foreground, or foreground mask is missing.");
             using Image background = Image.LoadFromFile(backgroundPath);
             using Image foreground = Image.LoadFromFile(foregroundPath);
+            using Image? mask = useMask ? Image.LoadFromFile(maskPath) : null;
+            if (useMask && mask is null)
+                throw new InvalidDataException("A required foreground mask could not be decoded.");
             if (background.IsEmpty() || foreground.IsEmpty()
                 || background.GetSize() != foreground.GetSize()
                 || background.GetWidth() * 3 != background.GetHeight() * 2
                 || background.GetWidth() < 64 || background.GetHeight() > 4096
                 || background.DetectAlpha() != Image.AlphaMode.None
-                || foreground.DetectAlpha() == Image.AlphaMode.None || foreground.IsInvisible())
+                || (!useMask && foreground.DetectAlpha() == Image.AlphaMode.None) || foreground.IsInvisible())
                 throw new InvalidDataException("Layers require matching 2:3 images, an opaque background, and a visible transparent foreground.");
-            result = new(ImageTexture.CreateFromImage(background), ImageTexture.CreateFromImage(foreground));
+            if (mask is not null)
+            {
+                if (mask.IsEmpty() || mask.GetSize() != foreground.GetSize())
+                    throw new InvalidDataException("Foreground mask must match the source canvas.");
+                // Conversion is in memory only. The original source PNG is never rewritten.
+                mask.Convert(Image.Format.Rgba8);
+                foreground.Convert(Image.Format.Rgba8);
+                if (!LayerPolicy.IsValidForegroundMask(mask.GetData(), foreground.GetData(), mask.GetWidth(), mask.GetHeight(),
+                    layers.ForegroundMaskChannel))
+                    throw new InvalidDataException("Foreground mask needs visible and hidden regions in its selected red/alpha channel; red masks must be opaque near-grayscale.");
+            }
+            result = new(ImageTexture.CreateFromImage(background), ImageTexture.CreateFromImage(foreground),
+                mask is not null ? ImageTexture.CreateFromImage(mask) : null);
         }
         catch (Exception ex)
         {

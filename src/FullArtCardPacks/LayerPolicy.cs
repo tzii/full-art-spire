@@ -2,7 +2,8 @@ namespace FullArtCardPacks;
 
 internal readonly record struct LayerDecision(
     float Depth, float BackgroundShift, float ForegroundShift,
-    float ForegroundScale, float ShadowStrength, float FrameInset);
+    float ForegroundScale, float SubjectScale, float SubjectOffsetX, float SubjectOffsetY,
+    float ShadowStrength, float FrameInset);
 
 internal static class LayerPolicy
 {
@@ -14,13 +15,20 @@ internal static class LayerPolicy
         decision = default;
         if (!enabled || !visible || entry.PreserveOriginalLayout
             || entry.Layers is not { } layers
-            || string.IsNullOrWhiteSpace(layers.Background)
-            || string.IsNullOrWhiteSpace(layers.Foreground)
-            || string.Equals(layers.Background, layers.Foreground, StringComparison.OrdinalIgnoreCase)
+            || !IsRelativeImagePath(layers.Background)
+            || !IsRelativeImagePath(layers.Foreground)
+            || SamePath(layers.Background, layers.Foreground)
+            || layers.ForegroundMask is null
+            || layers.ForegroundMaskChannel is not "red" and not "alpha"
+            || (layers.ForegroundMask.Length != 0 && (!IsRelativeImagePath(layers.ForegroundMask)
+                || SamePath(layers.ForegroundMask, layers.Background) || SamePath(layers.ForegroundMask, layers.Foreground)))
             || !InRange(layers.Depth, 0f, 1f)
             || !InRange(layers.BackgroundShift, 0f, 0.025f)
             || !InRange(layers.ForegroundShift, 0f, 0.04f)
             || !InRange(layers.ForegroundScale, 1f, 1.10f)
+            || !InRange(layers.SubjectScale, 0.25f, 1.5f)
+            || !InRange(layers.SubjectOffsetX, -0.5f, 0.5f)
+            || !InRange(layers.SubjectOffsetY, -0.5f, 0.5f)
             || !InRange(layers.ShadowStrength, 0f, 0.5f)
             || !InRange(layers.FrameInset, 0.025f, 0.10f)
             || !float.IsFinite(globalDepth))
@@ -28,7 +36,8 @@ internal static class LayerPolicy
 
         decision = new(layers.Depth * Math.Clamp(globalDepth, 0f, 1f),
             layers.BackgroundShift, layers.ForegroundShift,
-            layers.ForegroundScale, layers.ShadowStrength, layers.FrameInset);
+            layers.ForegroundScale, layers.SubjectScale, layers.SubjectOffsetX, layers.SubjectOffsetY,
+            layers.ShadowStrength, layers.FrameInset);
         return true;
     }
 
@@ -44,6 +53,46 @@ internal static class LayerPolicy
 
     internal static bool CanComposite(float opacity)
         => float.IsFinite(opacity) && opacity >= 0.9999f;
+
+    internal static bool IsRelativeImagePath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || Path.IsPathRooted(path)
+            || path.Contains(':') || !path.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+            return false;
+        return path.Replace('\\', '/').Split('/').All(part => part.Length > 0 && part is not "." and not ".."
+            && part == part.TrimEnd(' ', '.')
+            && part.All(character => !char.IsControl(character) && "<>:\"|?*".IndexOf(character) < 0));
+    }
+
+    // Generated mattes may contain small RGB encoding differences. Red is the
+    // canonical data channel for red masks, without sRGB conversion. Alpha
+    // masks ignore RGB. Both need meaningful visible and hidden regions.
+    internal static bool IsValidForegroundMask(ReadOnlySpan<byte> mask, ReadOnlySpan<byte> foreground,
+        int width, int height, string channel = "red")
+    {
+        long pixels = (long)width * height;
+        if (channel is not "red" and not "alpha" || width <= 0 || height <= 0 || pixels > int.MaxValue / 4
+            || mask.Length != pixels * 4 || foreground.Length != mask.Length)
+            return false;
+        int hidden = 0, visible = 0;
+        for (int index = 0; index < mask.Length; index += 4)
+        {
+            if (channel == "red")
+            {
+                int low = Math.Min(mask[index], Math.Min(mask[index + 1], mask[index + 2]));
+                int high = Math.Max(mask[index], Math.Max(mask[index + 1], mask[index + 2]));
+                if (mask[index + 3] != 255 || high - low > 16) return false;
+            }
+            int coverage = mask[index + (channel == "alpha" ? 3 : 0)];
+            if (coverage <= 16) hidden++;
+            if (coverage >= 239 && foreground[index + 3] >= 16) visible++;
+        }
+        long minimumRegion = Math.Max(1, (pixels + 999) / 1000);
+        return hidden >= minimumRegion && visible >= minimumRegion;
+    }
+
+    private static bool SamePath(string first, string second)
+        => string.Equals(first.Replace('\\', '/'), second.Replace('\\', '/'), StringComparison.OrdinalIgnoreCase);
 
     private static bool InRange(float value, float minimum, float maximum)
         => float.IsFinite(value) && value >= minimum && value <= maximum;

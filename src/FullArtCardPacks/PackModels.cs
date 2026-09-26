@@ -60,6 +60,10 @@ internal sealed record FullArtLayerMetadata
     public string Background { get; init; } = "";
     [JsonPropertyName("foreground")]
     public string Foreground { get; init; } = "";
+    [JsonPropertyName("foreground_mask")]
+    public string ForegroundMask { get; init; } = "";
+    [JsonPropertyName("foreground_mask_channel")]
+    public string ForegroundMaskChannel { get; init; } = "red";
     [JsonPropertyName("depth")]
     public float Depth { get; init; } = 1f;
     [JsonPropertyName("background_shift")]
@@ -68,6 +72,14 @@ internal sealed record FullArtLayerMetadata
     public float ForegroundShift { get; init; } = 0.022f;
     [JsonPropertyName("foreground_scale")]
     public float ForegroundScale { get; init; } = 1.035f;
+    // Static placement corrects a generated cutout without resampling its PNG.
+    // foreground_scale remains the separate depth-dependent lift.
+    [JsonPropertyName("subject_scale")]
+    public float SubjectScale { get; init; } = 1f;
+    [JsonPropertyName("subject_offset_x")]
+    public float SubjectOffsetX { get; init; } = 0f;
+    [JsonPropertyName("subject_offset_y")]
+    public float SubjectOffsetY { get; init; } = 0f;
     [JsonPropertyName("shadow_strength")]
     public float ShadowStrength { get; init; } = 0.28f;
     [JsonPropertyName("frame_inset")]
