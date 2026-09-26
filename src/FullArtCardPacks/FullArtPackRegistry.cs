@@ -16,6 +16,11 @@ internal static class FullArtPackRegistry
 
     internal static void Load()
     {
+        // Explicit reload is the boundary for replaced/recovered files.
+        // Drop cache ownership only; active native nodes keep their resources.
+        TextureCache.Invalidate();
+        LayeredCardRenderer.InvalidateResources();
+        EffectRenderer.InvalidateResources();
         ModDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "";
         CardsByRuntimeModel.Clear();
         Config = LoadConfig();

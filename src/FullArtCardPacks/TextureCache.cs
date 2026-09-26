@@ -6,14 +6,22 @@ internal static class TextureCache
 {
     private const string ModId = "FullArtCardPacks";
 
-    private static readonly Dictionary<string, Texture2D?> Cache = new(StringComparer.OrdinalIgnoreCase);
+    // Image count, not card count. Includes negative entries. Native controls
+    // may retain live textures outside this bounded set after LRU eviction.
+    internal const int Capacity = 48;
+    private static readonly LruCache<string, Texture2D?> Cache = new(Capacity, StringComparer.OrdinalIgnoreCase);
+
+    internal static void Invalidate() => Cache.Clear();
 
     internal static bool TryGetTexture(FullArtCardEntry entry, out Texture2D? texture)
+        => TryLoadPath(entry.Art, out texture);
+
+    internal static bool TryLoadPath(string relativePath, out Texture2D? texture)
     {
         texture = null;
-        if (!FullArtPackRegistry.TryResolveModPath(entry.Art, out string artPath))
+        if (!FullArtPackRegistry.TryResolveModPath(relativePath, out string artPath))
         {
-            GD.PushWarning($"[{ModId}] Invalid art path for {entry.CanonicalAssetName}: {entry.Art}");
+            GD.PushWarning($"[{ModId}] Invalid texture path: {relativePath}");
             return false;
         }
 
@@ -24,23 +32,25 @@ internal static class TextureCache
 
         if (!File.Exists(artPath))
         {
-            GD.PushWarning($"[{ModId}] Missing art file for {entry.CanonicalAssetName}: {artPath}");
-            Cache[artPath] = null;
+            GD.PushWarning($"[{ModId}] Missing texture file: {artPath}");
+            Cache.Set(artPath, null);
             return false;
         }
 
         try
         {
-            Image image = Image.LoadFromFile(artPath);
+            using Image? image = Image.LoadFromFile(artPath);
+            if (image is null || image.IsEmpty())
+                throw new InvalidDataException("Texture could not be decoded.");
             texture = ImageTexture.CreateFromImage(image);
-            Cache[artPath] = texture;
-            GD.Print($"[{ModId}] Loaded full art: {entry.Art}");
+            Cache.Set(artPath, texture);
+            GD.Print($"[{ModId}] Loaded texture: {relativePath}");
             return texture is not null;
         }
         catch (Exception ex)
         {
             GD.PushWarning($"[{ModId}] Failed to load {artPath}: {ex.Message}");
-            Cache[artPath] = null;
+            Cache.Set(artPath, null);
             return false;
         }
     }

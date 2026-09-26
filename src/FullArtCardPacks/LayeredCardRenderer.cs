@@ -8,13 +8,24 @@ internal static class LayeredCardRenderer
 {
     private const string OverlayName = "_full_art_layered_card";
     private const string OverlayGroup = "full_art_card_packs_layered_cards";
-    private static readonly Dictionary<string, LayerTextures?> Cache = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly HashSet<string> Warnings = new(StringComparer.OrdinalIgnoreCase);
+    // Validation caches no textures. New texture IDs after eviction/reload
+    // require fresh validation, even when their filenames have not changed.
+    private readonly record struct ValidationKey(ulong Background, ulong Foreground, ulong Mask, string Channel);
+    private static readonly LruCache<ValidationKey, bool> ValidationCache = new(64);
+    private static readonly LruCache<string, bool> Warnings = new(128, StringComparer.OrdinalIgnoreCase);
     private static Shader? _shader;
     private static bool _shaderAttempted;
     private static ulong _processTreeId;
 
-    private sealed record LayerTextures(Texture2D Background, Texture2D Foreground, Texture2D? ForegroundMask);
+    private readonly record struct LayerTextures(Texture2D Background, Texture2D Foreground, Texture2D? ForegroundMask);
+
+    internal static void InvalidateResources()
+    {
+        ValidationCache.Clear();
+        Warnings.Clear();
+        _shader = null;
+        _shaderAttempted = false;
+    }
 
     internal static void ApplyOrUpdate(NCard cardNode)
     {
@@ -98,15 +109,21 @@ internal static class LayeredCardRenderer
         if (useMask && !FullArtPackRegistry.TryResolveModPath(layers.ForegroundMask, out maskPath))
             return null;
         string key = backgroundPath + "\n" + foregroundPath + "\n" + maskPath + "\n" + layers.ForegroundMaskChannel;
-        if (Cache.TryGetValue(key, out var cached)) return cached;
-        LayerTextures? result = null;
+        if (!TextureCache.TryLoadPath(layers.Background, out Texture2D? backgroundTexture)
+            || !TextureCache.TryLoadPath(layers.Foreground, out Texture2D? foregroundTexture))
+            return null;
+        Texture2D? maskTexture = null;
+        if (useMask && !TextureCache.TryLoadPath(layers.ForegroundMask, out maskTexture))
+            return null;
+        var validationKey = new ValidationKey(backgroundTexture!.GetInstanceId(), foregroundTexture!.GetInstanceId(),
+            maskTexture?.GetInstanceId() ?? 0, layers.ForegroundMaskChannel);
+        var textures = new LayerTextures(backgroundTexture, foregroundTexture, maskTexture);
+        if (ValidationCache.TryGetValue(validationKey, out bool valid)) return valid ? textures : null;
         try
         {
-            if (!File.Exists(backgroundPath) || !File.Exists(foregroundPath) || (useMask && !File.Exists(maskPath)))
-                throw new InvalidDataException("A required clean plate, foreground, or foreground mask is missing.");
-            using Image background = Image.LoadFromFile(backgroundPath);
-            using Image foreground = Image.LoadFromFile(foregroundPath);
-            using Image? mask = useMask ? Image.LoadFromFile(maskPath) : null;
+            using Image background = backgroundTexture.GetImage();
+            using Image foreground = foregroundTexture.GetImage();
+            using Image? mask = maskTexture?.GetImage();
             if (useMask && mask is null)
                 throw new InvalidDataException("A required foreground mask could not be decoded.");
             if (background.IsEmpty() || foreground.IsEmpty()
@@ -127,15 +144,15 @@ internal static class LayeredCardRenderer
                     layers.ForegroundMaskChannel))
                     throw new InvalidDataException("Foreground mask needs visible and hidden regions in its selected red/alpha channel; red masks must be opaque near-grayscale.");
             }
-            result = new(ImageTexture.CreateFromImage(background), ImageTexture.CreateFromImage(foreground),
-                mask is not null ? ImageTexture.CreateFromImage(mask) : null);
+            ValidationCache.Set(validationKey, true);
+            return textures;
         }
         catch (Exception ex)
         {
             WarnOnce(key, $"Could not load layered card {layers.Background}: {ex.Message}");
         }
-        Cache[key] = result;
-        return result;
+        ValidationCache.Set(validationKey, false);
+        return null;
     }
 
     private static TextureRect Create(TextureRect portrait)
@@ -221,6 +238,8 @@ internal static class LayeredCardRenderer
 
     private static void WarnOnce(string key, string message)
     {
-        if (Warnings.Add(key)) GD.PushWarning($"[FullArtCardPacks] {message}");
+        if (Warnings.TryGetValue(key, out _)) return;
+        Warnings.Set(key, true);
+        GD.PushWarning($"[FullArtCardPacks] {message}");
     }
 }

@@ -5,8 +5,13 @@ namespace FullArtCardPacks;
 internal static class EffectRenderer
 {
     private static Shader? _effectShader;
-    private static readonly Dictionary<string, Texture2D?> MaskCache = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly HashSet<string> EmittedWarnings = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly LruCache<string, bool> EmittedWarnings = new(128, StringComparer.OrdinalIgnoreCase);
+
+    internal static void InvalidateResources()
+    {
+        _effectShader = null;
+        EmittedWarnings.Clear();
+    }
 
     internal static void Initialize()
     {
@@ -76,23 +81,9 @@ internal static class EffectRenderer
 
     private static Texture2D? LoadMask(string maskPath)
     {
-        if (MaskCache.TryGetValue(maskPath, out Texture2D? cached))
-        {
-            return cached;
-        }
-        if (!FullArtPackRegistry.TryResolveModPath(maskPath, out string fullPath) || !File.Exists(fullPath))
-        {
-            GD.PushWarning($"[FullArtCardPacks] Permission mask not found: {maskPath}");
-            MaskCache[maskPath] = null;
-            return null;
-        }
-
-        Texture2D? texture = TryLoadResource(
-            "permission mask",
-            fullPath,
-            () => ImageTexture.CreateFromImage(Image.LoadFromFile(fullPath)));
-        MaskCache[maskPath] = texture;
-        return texture;
+        // The sampler's shader hint determines color/data interpretation.
+        // Sharing ImageTexture objects does not add a source_color hint.
+        return TextureCache.TryLoadPath(maskPath, out Texture2D? texture) ? texture : null;
     }
 
     internal static T? TryLoadResource<T>(
@@ -120,10 +111,11 @@ internal static class EffectRenderer
     {
         lock (EmittedWarnings)
         {
-            if (!EmittedWarnings.Add(key))
+            if (EmittedWarnings.TryGetValue(key, out _))
             {
                 return;
             }
+            EmittedWarnings.Set(key, true);
         }
         if (warningSink is not null)
         {
