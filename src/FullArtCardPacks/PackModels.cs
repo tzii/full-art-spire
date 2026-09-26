@@ -64,6 +64,11 @@ internal sealed record FullArtLayerMetadata
     public string ForegroundMask { get; init; } = "";
     [JsonPropertyName("foreground_mask_channel")]
     public string ForegroundMaskChannel { get; init; } = "red";
+    // Preserve malformed values for per-card fail-flat validation. A bad
+    // registration must not prevent unrelated entries from deserializing.
+    [JsonPropertyName("registration")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public JsonElement Registration { get; init; }
     [JsonPropertyName("depth")]
     public float Depth { get; init; } = 1f;
     [JsonPropertyName("background_shift")]

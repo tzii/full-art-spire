@@ -95,6 +95,7 @@ internal static class LayerPolicyTests
         Require(!LayerPolicy.CanComposite(float.NaN), "invalid opacity fails closed");
         TestMasks(layers, entry);
         TestCanvases();
+        TestRegistration();
         Console.WriteLine("Layered card policy tests passed");
     }
 
@@ -116,6 +117,43 @@ internal static class LayerPolicyTests
             foreach (bool masked in new[] { false, true })
                 Require(!LayerPolicy.IsValidCanvas(size.Item1, size.Item2, masked),
                     $"invalid, landscape or over-budget canvas {size} rejected, masked={masked}");
+    }
+
+    private static void TestRegistration()
+    {
+        const string valid = """{"mode":"normalized_source_uv","source_dimensions":[606,852],"mask_dimensions":[1058,1487],"background_dimensions":[303,426]}""";
+        var layers = new FullArtLayerMetadata { Background = "layers/card/plate.png", Foreground = "art/card.png",
+            ForegroundMask = "layers/card/mask.png", ForegroundMaskChannel = "alpha",
+            Registration = JsonDocument.Parse(valid).RootElement.Clone() };
+        var entry = new FullArtCardEntry { Art = "art/card.png", Layers = layers };
+        Require(LayerPolicy.TryDecide(entry, true, true, 1, out _), "explicit normalized registration accepted");
+        Require(LayerPolicy.TryGetRegistration(layers, out var registration)
+            && registration!.Value.Source == new LayerCanvas(606, 852)
+            && registration.Value.Mask == new LayerCanvas(1058, 1487), "declared canvases survive JSON");
+        foreach (string invalid in new[] { "null", "[]", "false", "42", "\"normalized_source_uv\"", "{}",
+            valid.Replace("normalized_source_uv", "normalized"), valid.Replace("[606,852]", "[606]"),
+            valid.Replace("[606,852]", "[606,852,1]"), valid.Replace("[606,852]", "[true,852]"),
+            valid.Replace("[606,852]", "[\"606\",852]"), valid.Replace("[606,852]", "[606.5,852]"),
+            valid.Replace("[606,852]", "[606.0,852]"), valid.Replace("[606,852]", "[2147483648,852]"),
+            valid.Replace("[1058,1487]", "[1058,1480]"), valid.Replace("[303,426]", "[303,430]"),
+            valid.Replace("[303,426]", "[2730,4096]"), valid.Replace("[1058,1487]", "[63,89]"),
+            valid.Replace("[303,426]}", "[303,426],\"aspect_tolerance\":1}"),
+            valid.Replace("[303,426]}", "[303,426],\"mode\":\"normalized_source_uv\"}") })
+        {
+            var malformed = layers with { Registration = JsonDocument.Parse(invalid).RootElement.Clone() };
+            Require(!LayerPolicy.TryGetRegistration(malformed, out _), "malformed registration rejected: " + invalid);
+            Require(!LayerPolicy.TryDecide(entry with { Layers = malformed }, true, true, 1, out _), "malformed registration fails flat");
+        }
+        Require(!LayerPolicy.TryDecide(entry with { Art = "art/copy.png" }, true, true, 1, out _), "same-size source substitution fails flat");
+        Require(!LayerPolicy.TryDecide(entry with { Layers = layers with { ForegroundMask = "" } }, true, true, 1, out _), "registration requires separate mask");
+        Require(LayerPolicy.TryDecide(entry with { Layers = layers with { Foreground = "art\\card.png" } }, true, true, 1, out _), "normalized separators retain path identity");
+        byte[] mask = MaskBytes(8 * 12, index => (byte)(index % 8 < 4 ? 255 : 0));
+        byte[] source = MaskBytes(4 * 6, _ => 255);
+        Require(LayerPolicy.IsValidForegroundMask(mask, source, 8, 12, 4, 6), "different-size red mask uses normalized source alpha");
+        for (int y = 0; y < 6; y++) for (int x = 0; x < 4; x++) source[(y * 4 + x) * 4 + 3] = (byte)(x < 3 ? 0 : 255);
+        Require(!LayerPolicy.IsValidForegroundMask(mask, source, 8, 12, 4, 6), "disjoint source alpha cannot produce visible coverage");
+        for (int i = 3; i < source.Length; i += 4) source[i] = 128;
+        Require(LayerPolicy.IsValidForegroundMask(mask, source, 8, 12, 4, 6), "partial normalized source alpha remains visible");
     }
 
     private static void TestMasks(FullArtLayerMetadata layers, FullArtCardEntry entry)

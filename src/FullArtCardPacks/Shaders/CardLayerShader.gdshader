@@ -2,6 +2,8 @@ shader_type canvas_item;
 render_mode unshaded, blend_mix;
 
 uniform sampler2D foreground_texture : source_color, filter_linear, repeat_disable;
+uniform sampler2D background_texture : source_color, filter_linear, repeat_disable;
+uniform bool use_normalized_source_uv = false;
 // The mask is data: no source_color hint or sRGB conversion.
 uniform sampler2D foreground_mask_texture : filter_linear, repeat_disable;
 uniform bool use_foreground_mask = false;
@@ -46,6 +48,11 @@ void fragment() {
     float plate_zoom = 1.0 + 2.1 * background_shift * depth;
     vec2 plate_uv = (UV - 0.5) / plate_zoom + 0.5 + travel * background_shift;
     vec3 background = texture(TEXTURE, clamp(plate_uv, vec2(0.001), vec2(0.999))).rgb;
+    if (use_normalized_source_uv) {
+        // TEXTURE anchors KeepAspectCovered to the unchanged original; every
+        // registered sampler addresses the same normalized source domain.
+        background = texture(background_texture, clamp(plate_uv, vec2(0.001), vec2(0.999))).rgb;
+    }
 
     vec2 edge_distance = min(UV, vec2(1.0) - UV);
     float edge = min(edge_distance.x, edge_distance.y);

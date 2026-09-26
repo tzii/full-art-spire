@@ -1,4 +1,9 @@
+using System.Text.Json;
+
 namespace FullArtCardPacks;
+
+internal readonly record struct LayerCanvas(int Width, int Height);
+internal readonly record struct LayerRegistration(LayerCanvas Source, LayerCanvas Mask, LayerCanvas Background);
 
 internal readonly record struct LayerDecision(
     float Depth, float BackgroundShift, float ForegroundShift,
@@ -7,6 +12,7 @@ internal readonly record struct LayerDecision(
 
 internal static class LayerPolicy
 {
+    internal const double MaximumRegistrationAspectError = 0.001;
     // The clean plate must cover the entire plane. Unsupported or malformed
     // metadata falls back to the established flat card, never guessed layers.
     internal static bool TryDecide(FullArtCardEntry entry, bool enabled,
@@ -22,6 +28,8 @@ internal static class LayerPolicy
             || layers.ForegroundMaskChannel is not "red" and not "alpha"
             || (layers.ForegroundMask.Length != 0 && (!IsRelativeImagePath(layers.ForegroundMask)
                 || SamePath(layers.ForegroundMask, layers.Background) || SamePath(layers.ForegroundMask, layers.Foreground)))
+            || !TryGetRegistration(layers, out var registration)
+            || (registration is not null && (!IsRelativeImagePath(entry.Art) || !SamePath(entry.Art, layers.Foreground)))
             || !InRange(layers.Depth, 0f, 1f)
             || !InRange(layers.BackgroundShift, 0f, 0.025f)
             || !InRange(layers.ForegroundShift, 0f, 0.04f)
@@ -38,6 +46,44 @@ internal static class LayerPolicy
             layers.BackgroundShift, layers.ForegroundShift,
             layers.ForegroundScale, layers.SubjectScale, layers.SubjectOffsetX, layers.SubjectOffsetY,
             layers.ShadowStrength, layers.FrameInset);
+        return true;
+    }
+
+    internal static bool TryGetRegistration(FullArtLayerMetadata layers, out LayerRegistration? registration)
+    {
+        registration = null;
+        JsonElement value = layers.Registration;
+        if (value.ValueKind == JsonValueKind.Undefined) return true;
+        if (value.ValueKind != JsonValueKind.Object || string.IsNullOrEmpty(layers.ForegroundMask)) return false;
+        // Reject duplicate and unknown fields instead of interpreting an
+        // ambiguous declaration differently from the browser/package builder.
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        foreach (JsonProperty property in value.EnumerateObject())
+            if (!names.Add(property.Name) || property.Name is not
+                ("mode" or "source_dimensions" or "mask_dimensions" or "background_dimensions")) return false;
+        if (names.Count != 4 || !value.TryGetProperty("mode", out JsonElement mode)
+            || mode.ValueKind != JsonValueKind.String || mode.GetString() != "normalized_source_uv"
+            || !TryCanvas(value, "source_dimensions", out var source)
+            || !TryCanvas(value, "mask_dimensions", out var mask)
+            || !TryCanvas(value, "background_dimensions", out var background)
+            || !HasCompatibleAspect(source, mask) || !HasCompatibleAspect(source, background)) return false;
+        registration = new(source, mask, background);
+        return true;
+    }
+
+    internal static bool HasCompatibleAspect(LayerCanvas source, LayerCanvas other)
+        => IsValidCanvas(source.Width, source.Height, true) && IsValidCanvas(other.Width, other.Height, true)
+            && Math.Abs((double)other.Width * source.Height / ((double)other.Height * source.Width) - 1.0)
+                <= MaximumRegistrationAspectError;
+
+    private static bool TryCanvas(JsonElement value, string name, out LayerCanvas canvas)
+    {
+        canvas = default;
+        if (!value.TryGetProperty(name, out var dimensions) || dimensions.ValueKind != JsonValueKind.Array
+            || dimensions.GetArrayLength() != 2 || dimensions[0].ValueKind != JsonValueKind.Number
+            || dimensions[1].ValueKind != JsonValueKind.Number || !dimensions[0].TryGetInt32(out int width)
+            || !dimensions[1].TryGetInt32(out int height) || !IsValidCanvas(width, height, true)) return false;
+        canvas = new(width, height);
         return true;
     }
 
@@ -80,10 +126,16 @@ internal static class LayerPolicy
     // masks ignore RGB. Both need meaningful visible and hidden regions.
     internal static bool IsValidForegroundMask(ReadOnlySpan<byte> mask, ReadOnlySpan<byte> foreground,
         int width, int height, string channel = "red")
+        => IsValidForegroundMask(mask, foreground, width, height, width, height, channel);
+
+    internal static bool IsValidForegroundMask(ReadOnlySpan<byte> mask, ReadOnlySpan<byte> foreground,
+        int width, int height, int sourceWidth, int sourceHeight, string channel = "red")
     {
         long pixels = (long)width * height;
+        long sourcePixels = (long)sourceWidth * sourceHeight;
         if (channel is not "red" and not "alpha" || width <= 0 || height <= 0 || pixels > int.MaxValue / 4
-            || mask.Length != pixels * 4 || foreground.Length != mask.Length)
+            || sourceWidth <= 0 || sourceHeight <= 0 || sourcePixels > int.MaxValue / 4
+            || mask.Length != pixels * 4 || foreground.Length != sourcePixels * 4)
             return false;
         int hidden = 0, visible = 0;
         for (int index = 0; index < mask.Length; index += 4)
@@ -96,10 +148,25 @@ internal static class LayerPolicy
             }
             int coverage = mask[index + (channel == "alpha" ? 3 : 0)];
             if (coverage <= 16) hidden++;
-            if (coverage >= 239 && foreground[index + 3] >= 16) visible++;
+            if (coverage >= 239 && SourceAlpha(foreground, sourceWidth, sourceHeight,
+                index / 4 % width, index / 4 / width, width, height) >= 16) visible++;
         }
         long minimumRegion = Math.Max(1, (pixels + 999) / 1000);
         return hidden >= minimumRegion && visible >= minimumRegion;
+    }
+
+    private static double SourceAlpha(ReadOnlySpan<byte> source, int width, int height,
+        int maskX, int maskY, int maskWidth, int maskHeight)
+    {
+        // Match normalized GPU sampling at the mask texel center, including
+        // partial source alpha. No source or mask bitmap is resized.
+        double x = Math.Clamp((maskX + 0.5) * width / maskWidth - 0.5, 0, width - 1);
+        double y = Math.Clamp((maskY + 0.5) * height / maskHeight - 0.5, 0, height - 1);
+        int x0 = (int)x, y0 = (int)y, x1 = Math.Min(x0 + 1, width - 1), y1 = Math.Min(y0 + 1, height - 1);
+        double dx = x - x0, dy = y - y0;
+        double top = source[(y0 * width + x0) * 4 + 3] * (1 - dx) + source[(y0 * width + x1) * 4 + 3] * dx;
+        double bottom = source[(y1 * width + x0) * 4 + 3] * (1 - dx) + source[(y1 * width + x1) * 4 + 3] * dx;
+        return top * (1 - dy) + bottom * dy;
     }
 
     private static bool SamePath(string first, string second)

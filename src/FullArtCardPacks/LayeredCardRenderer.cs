@@ -10,14 +10,16 @@ internal static class LayeredCardRenderer
     private const string OverlayGroup = "full_art_card_packs_layered_cards";
     // Validation caches no textures. New texture IDs after eviction/reload
     // require fresh validation, even when their filenames have not changed.
-    private readonly record struct ValidationKey(ulong Background, ulong Foreground, ulong Mask, string Channel);
+    private readonly record struct ValidationKey(ulong Background, ulong Foreground, ulong Mask, string Channel,
+        LayerRegistration? Registration, LayerCanvas BackgroundSize, LayerCanvas ForegroundSize, LayerCanvas MaskSize);
     private static readonly LruCache<ValidationKey, bool> ValidationCache = new(64);
     private static readonly LruCache<string, bool> Warnings = new(128, StringComparer.OrdinalIgnoreCase);
     private static Shader? _shader;
     private static bool _shaderAttempted;
     private static ulong _processTreeId;
 
-    private readonly record struct LayerTextures(Texture2D Background, Texture2D Foreground, Texture2D? ForegroundMask);
+    private readonly record struct LayerTextures(Texture2D Background, Texture2D Foreground, Texture2D? ForegroundMask,
+        bool NormalizedSourceUv);
 
     internal static void InvalidateResources()
     {
@@ -49,6 +51,8 @@ internal static class LayeredCardRenderer
             TextureRect overlay = Find(portrait) ?? Create(portrait);
             var material = overlay.Material as ShaderMaterial ?? new ShaderMaterial();
             material.Shader = shader;
+            material.SetShaderParameter("use_normalized_source_uv", textures.NormalizedSourceUv);
+            material.SetShaderParameter("background_texture", textures.Background);
             material.SetShaderParameter("foreground_texture", textures.Foreground);
             material.SetShaderParameter("foreground_mask_texture", textures.ForegroundMask ?? textures.Foreground);
             material.SetShaderParameter("use_foreground_mask", textures.ForegroundMask is not null);
@@ -63,7 +67,9 @@ internal static class LayeredCardRenderer
             material.SetShaderParameter("shadow_strength", decision.ShadowStrength);
             material.SetShaderParameter("frame_inset", decision.FrameInset);
             overlay.Material = material;
-            overlay.Texture = textures.Background;
+            // KeepAspectCovered derives UV from the original source, even
+            // when the registered clean plate differs by integer rounding.
+            overlay.Texture = textures.NormalizedSourceUv ? textures.Foreground : textures.Background;
             overlay.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
             overlay.StretchMode = portrait.StretchMode;
             overlay.Visible = portrait.Visible;
@@ -102,9 +108,14 @@ internal static class LayeredCardRenderer
     private static LayerTextures? LoadTextures(FullArtCardEntry entry)
     {
         FullArtLayerMetadata layers = entry.Layers!;
-        if (!FullArtPackRegistry.TryResolveModPath(layers.Background, out string backgroundPath)
+        if (!LayerPolicy.TryGetRegistration(layers, out var registration)
+            || !FullArtPackRegistry.TryResolveModPath(layers.Background, out string backgroundPath)
             || !FullArtPackRegistry.TryResolveModPath(layers.Foreground, out string foregroundPath))
             return null;
+        // Identity precedes every positive cache shortcut. A duplicate file
+        // with equal bytes is not the original driving the native crop.
+        if (registration is not null && (!FullArtPackRegistry.TryResolveModPath(entry.Art, out string sourcePath)
+            || !string.Equals(sourcePath, foregroundPath, StringComparison.OrdinalIgnoreCase))) return null;
         bool useMask = layers.ForegroundMask.Length != 0;
         string maskPath = "";
         if (useMask && !FullArtPackRegistry.TryResolveModPath(layers.ForegroundMask, out maskPath))
@@ -123,9 +134,12 @@ internal static class LayeredCardRenderer
             && (!useMask || !FullArtPackRegistry.TryResolveModPath(entry.Art, out string artPath)
                 || !string.Equals(artPath, foregroundPath, StringComparison.OrdinalIgnoreCase)))
             return null;
-        var validationKey = new ValidationKey(backgroundTexture!.GetInstanceId(), foregroundTexture!.GetInstanceId(),
-            maskTexture?.GetInstanceId() ?? 0, layers.ForegroundMaskChannel);
-        var textures = new LayerTextures(backgroundTexture, foregroundTexture, maskTexture);
+        var backgroundSize = new LayerCanvas(backgroundTexture!.GetWidth(), backgroundTexture.GetHeight());
+        var foregroundSize = new LayerCanvas(foregroundTexture!.GetWidth(), foregroundTexture.GetHeight());
+        var maskSize = maskTexture is null ? default : new LayerCanvas(maskTexture.GetWidth(), maskTexture.GetHeight());
+        var validationKey = new ValidationKey(backgroundTexture.GetInstanceId(), foregroundTexture.GetInstanceId(),
+            maskTexture?.GetInstanceId() ?? 0, layers.ForegroundMaskChannel, registration, backgroundSize, foregroundSize, maskSize);
+        var textures = new LayerTextures(backgroundTexture, foregroundTexture, maskTexture, registration is not null);
         if (ValidationCache.TryGetValue(validationKey, out bool valid)) return valid ? textures : null;
         try
         {
@@ -134,21 +148,26 @@ internal static class LayeredCardRenderer
             using Image? mask = maskTexture?.GetImage();
             if (useMask && mask is null)
                 throw new InvalidDataException("A required foreground mask could not be decoded.");
+            if (registration is { } declared && (declared.Source != foregroundSize || declared.Background != backgroundSize
+                || declared.Mask != maskSize))
+                throw new InvalidDataException("Normalized source UV registration dimensions differ from actual textures.");
             if (background.IsEmpty() || foreground.IsEmpty()
-                || background.GetSize() != foreground.GetSize()
+                || (registration is null && background.GetSize() != foreground.GetSize())
                 || !LayerPolicy.IsValidCanvas(background.GetWidth(), background.GetHeight(), useMask)
+                || !LayerPolicy.IsValidCanvas(foreground.GetWidth(), foreground.GetHeight(), useMask)
                 || background.DetectAlpha() != Image.AlphaMode.None
                 || (!useMask && foreground.DetectAlpha() == Image.AlphaMode.None) || foreground.IsInvisible())
                 throw new InvalidDataException("Layers require matching bounded portrait canvases, an opaque background, and visible coverage; unmasked RGBA layers require 2:3.");
             if (mask is not null)
             {
-                if (mask.IsEmpty() || mask.GetSize() != foreground.GetSize())
+                if (mask.IsEmpty() || !LayerPolicy.IsValidCanvas(mask.GetWidth(), mask.GetHeight(), true)
+                    || (registration is null && mask.GetSize() != foreground.GetSize()))
                     throw new InvalidDataException("Foreground mask must match the source canvas.");
                 // Conversion is in memory only. The original source PNG is never rewritten.
                 mask.Convert(Image.Format.Rgba8);
                 foreground.Convert(Image.Format.Rgba8);
                 if (!LayerPolicy.IsValidForegroundMask(mask.GetData(), foreground.GetData(), mask.GetWidth(), mask.GetHeight(),
-                    layers.ForegroundMaskChannel))
+                    foreground.GetWidth(), foreground.GetHeight(), layers.ForegroundMaskChannel))
                     throw new InvalidDataException("Foreground mask needs visible and hidden regions in its selected red/alpha channel; red masks must be opaque near-grayscale.");
             }
             ValidationCache.Set(validationKey, true);
