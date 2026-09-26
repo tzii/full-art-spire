@@ -32,6 +32,15 @@ internal static class EffectOverlayManager
         }
         cardNode.SetMeta(PresentationMetadata, (int)context.Presentation);
 
+        // Static foil masks do not follow the separated planes. Preserve the
+        // authored layered treatment while it is active, and restore foil on
+        // disabling it or when layer resources fail closed.
+        if (LayeredCardRenderer.HasActiveLayer(cardNode))
+        {
+            Clear(cardNode);
+            return;
+        }
+
         EffectDecision decision = EffectPolicy.Decide(model, entry);
         TextureRect? portrait = PortraitResolver.Resolve(cardNode);
         if (!decision.Enabled || portrait?.Texture is null)
@@ -93,7 +102,7 @@ internal static class EffectOverlayManager
                     presentation = (EffectPresentation)raw;
                 }
             }
-            ApplyOrUpdate(cardNode, new EffectContext(presentation));
+            CardEffectPatch.ApplyOrUpdate(cardNode, new EffectContext(presentation));
         }
     }
 

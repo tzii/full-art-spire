@@ -49,6 +49,29 @@ internal sealed record FullArtCardEntry
 
     [JsonPropertyName("effects")]
     public FullArtEffectMetadata? Effects { get; init; } = new();
+
+    [JsonPropertyName("layers")]
+    public FullArtLayerMetadata? Layers { get; init; }
+}
+
+internal sealed record FullArtLayerMetadata
+{
+    [JsonPropertyName("background")]
+    public string Background { get; init; } = "";
+    [JsonPropertyName("foreground")]
+    public string Foreground { get; init; } = "";
+    [JsonPropertyName("depth")]
+    public float Depth { get; init; } = 1f;
+    [JsonPropertyName("background_shift")]
+    public float BackgroundShift { get; init; } = 0.010f;
+    [JsonPropertyName("foreground_shift")]
+    public float ForegroundShift { get; init; } = 0.022f;
+    [JsonPropertyName("foreground_scale")]
+    public float ForegroundScale { get; init; } = 1.035f;
+    [JsonPropertyName("shadow_strength")]
+    public float ShadowStrength { get; init; } = 0.28f;
+    [JsonPropertyName("frame_inset")]
+    public float FrameInset { get; init; } = 0.055f;
 }
 
 internal sealed record FullArtEffectMetadata

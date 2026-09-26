@@ -34,6 +34,22 @@ internal static class PortraitPatch
         TryReplacePortrait(__instance, new EffectContext(EffectPresentation.Unknown));
     }
 
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(NCard), "Reload")]
+    private static void ReloadPostfix(NCard __instance)
+    {
+        // Reload also runs when locked/unknown visibility changes, without an
+        // UpdateVisuals call. Refresh the child before the next frame is drawn.
+        TryReplacePortrait(__instance, new EffectContext(EffectPresentation.Unknown));
+    }
+
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(NCard), "OnFreedToPool")]
+    private static void FreedToPoolPostfix(NCard __instance)
+    {
+        LayeredCardRenderer.Clear(__instance);
+    }
+
     private static void TryReplacePortrait(NCard cardNode, EffectContext context)
     {
         CardModel? model = cardNode.Model;

@@ -14,6 +14,7 @@ static void Near(float expected, float actual, float tolerance, string message)
 
 try
 {
+    LayerPolicyTests.Run();
     Equal(EffectSurface.Shimmer, EffectFinishSelector.Select(EffectSurface.Holo, FinishAssignment.ByRarity, TrialFinish.Foil, "Common", "card", 0), "common receives satin");
     Equal(EffectSurface.Foil, EffectFinishSelector.Select(EffectSurface.Holo, FinishAssignment.ByRarity, TrialFinish.Foil, "Uncommon", "card", 0), "uncommon receives foil");
     Equal(EffectSurface.Prismatic, EffectFinishSelector.Select(EffectSurface.Holo, FinishAssignment.ByRarity, TrialFinish.Foil, "Rare", "card", 0), "rare receives prismatic");
