@@ -49,6 +49,20 @@ internal static class LayerPolicy
         return true;
     }
 
+    internal const float MaxPortraitShift = 0.035f;
+
+    // Reviewed packs pin subjects in place; the player may let them follow the
+    // pointer. Lift grows with the shift so a subject cut by the canvas edge
+    // never reveals a gap. Authored motion at or above the slider is kept as is.
+    internal static LayerDecision WithPortraitParallax(LayerDecision decision, float strength)
+    {
+        if (!float.IsFinite(strength)) return decision;
+        float shift = Math.Clamp(strength, 0f, 1f) * MaxPortraitShift;
+        if (shift <= decision.ForegroundShift) return decision;
+        float scale = Math.Clamp(MathF.Max(decision.ForegroundScale, 1f + 2f * shift), 1f, 1.10f);
+        return decision with { ForegroundShift = shift, ForegroundScale = scale };
+    }
+
     internal static bool TryGetRegistration(FullArtLayerMetadata layers, out LayerRegistration? registration)
     {
         registration = null;

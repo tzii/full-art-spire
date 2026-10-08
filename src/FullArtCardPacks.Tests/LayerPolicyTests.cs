@@ -29,6 +29,30 @@ internal static class LayerPolicyTests
             "native layout remains native");
         Require(!LayerPolicy.TryDecide(entry with { Layers = null }, true, true, 1f, out _), "no guessed layers");
         Require(!LayerPolicy.TryDecide(entry, true, true, float.NaN, out _), "invalid global settings fail closed");
+        var pinned = JsonSerializer.Deserialize<FullArtLayerMetadata>("""
+            {
+                "background": "layers/silent/survivor/background.png",
+                "foreground": "layers/silent/survivor/foreground.png",
+                "foreground_shift": 0,
+                "foreground_scale": 1
+            }
+            """)!;
+        Require(LayerPolicy.TryDecide(entry with { Layers = pinned }, true, true, 1f, out var fixedSubject),
+            "reviewed pinned subject accepted");
+        Require(LayerPolicy.WithPortraitParallax(fixedSubject, 0f) == fixedSubject,
+            "zero portrait parallax keeps the reviewed pinned subject");
+        Require(LayerPolicy.WithPortraitParallax(fixedSubject, float.NaN) == fixedSubject,
+            "invalid portrait parallax keeps the reviewed decision");
+        var moving = LayerPolicy.WithPortraitParallax(fixedSubject, 1f);
+        Require(moving.ForegroundShift == LayerPolicy.MaxPortraitShift
+            && moving.ForegroundScale >= 1f + 2f * moving.ForegroundShift,
+            "full portrait parallax moves the subject with enough lift to cover canvas edges");
+        Require(LayerPolicy.WithPortraitParallax(fixedSubject, 9f) == moving, "portrait parallax is bounded");
+        Require(moving with { ForegroundShift = 0f, ForegroundScale = 1f } == fixedSubject,
+            "portrait parallax changes only subject shift and lift");
+        Require(LayerPolicy.TryDecide(entry, true, true, 1f, out decision)
+            && LayerPolicy.WithPortraitParallax(decision, 0.25f) == decision,
+            "authored motion above the slider keeps the legacy decision unchanged");
         var positioned = JsonSerializer.Deserialize<FullArtLayerMetadata>("""
             {
                 "background": "layers/silent/survivor/background.png",

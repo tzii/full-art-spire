@@ -9,6 +9,10 @@ public class FullArtModConfig : SimpleModConfig
     [ConfigSlider(0, 1, 0.05, Format = "{0:F2}")]
     public static float LayerDepth { get; set; } = 1f;
 
+    // How far the character follows the pointer; zero keeps it fixed.
+    [ConfigSlider(0, 1, 0.05, Format = "{0:F2}")]
+    public static float PortraitParallax { get; set; } = 0.5f;
+
     public static bool EnableEffects { get; set; } = false;
 
     [ConfigSlider(0, 1, 0.05, Format = "{0:F2}")]

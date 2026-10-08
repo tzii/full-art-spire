@@ -45,6 +45,9 @@ internal static class LayeredCardRenderer
                 return;
             }
 
+            decision = LayerPolicy.WithPortraitParallax(decision,
+                FullArtModConfig.ReducedMotion ? 0f : FullArtModConfig.PortraitParallax);
+
             foreach (TextureRect inactive in PortraitResolver.All(cardNode))
                 if (inactive != portrait) Remove(Find(inactive));
 
