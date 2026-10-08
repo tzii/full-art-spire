@@ -2,10 +2,16 @@ using System.Text;
 
 namespace FullArtCardPacks;
 
-public enum FinishAssignment { PackDefault, ByRarity, StableRandom, SingleFinish }
+public enum FinishAssignment { PackDefault, ByRarity, StableRandom, SingleFinish, ExperimentalMix }
 
 // Values match shader IDs; existing pack IDs must remain stable.
-public enum TrialFinish { Shimmer = 1, Foil = 2, Holo = 3, Prismatic = 4, BrushedSilver = 5, Ember = 6, Frost = 7 }
+public enum TrialFinish
+{
+    Shimmer = 1, Foil = 2, Holo = 3, Prismatic = 4, BrushedSilver = 5, Ember = 6, Frost = 7,
+    DiffractiveFoil = 8, EtchedFoil = 9, GlitterFoil = 10, CrackedIce = 11,
+    OilSlick = 12, Pearlescent = 13, Embossed = 14, Lenticular = 15,
+    Aurora = 16, Starfield = 17, Circuit = 18,
+}
 
 internal static class EffectFinishSelector
 {
@@ -24,11 +30,12 @@ internal static class EffectFinishSelector
                 _ => authored,
             },
             FinishAssignment.StableRandom => RandomFinish(runtimeModel, seed),
+            FinishAssignment.ExperimentalMix => RandomFinish(runtimeModel, seed, true),
             _ => authored,
         };
     }
 
-    private static EffectSurface RandomFinish(string runtimeModel, int seed)
+    private static EffectSurface RandomFinish(string runtimeModel, int seed, bool experimental = false)
     {
         uint hash = 2166136261;
         foreach (byte value in Encoding.UTF8.GetBytes(runtimeModel))
@@ -36,6 +43,7 @@ internal static class EffectFinishSelector
         // Mix integer bytes explicitly so results agree across platforms/cultures.
         for (int shift = 0; shift < 32; shift += 8)
             hash = unchecked((hash ^ (byte)((uint)seed >> shift)) * 16777619);
-        return (EffectSurface)(1 + hash % 7);
+        // Preserve the original seven-finish assignment for existing settings.
+        return (EffectSurface)(experimental ? 8 + hash % 11 : 1 + hash % 7);
     }
 }

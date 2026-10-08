@@ -32,6 +32,25 @@ try
         randomFinishes.Add(chosen);
     }
     Equal(7, randomFinishes.Count, "seeds explore all finishes");
+    var experimentalFinishes = new HashSet<EffectSurface>();
+    for (int seed = 0; seed < 256; seed++)
+    {
+        var chosen = EffectFinishSelector.Select(EffectSurface.Foil, FinishAssignment.ExperimentalMix,
+            TrialFinish.Foil, "Rare", "card", seed);
+        Equal(chosen, EffectFinishSelector.Select(EffectSurface.Foil, FinishAssignment.ExperimentalMix,
+            TrialFinish.Ember, "Common", "card", seed), "experimental mix is deterministic");
+        if ((int)chosen < 8 || (int)chosen > 18) throw new Exception("experimental finish out of range");
+        experimentalFinishes.Add(chosen);
+    }
+    Equal(11, experimentalFinishes.Count, "experimental seeds cover every new material");
+    foreach (TrialFinish finish in Enum.GetValues<TrialFinish>())
+    {
+        Equal((EffectSurface)finish, EffectFinishSelector.Select(EffectSurface.Holo,
+            FinishAssignment.SingleFinish, finish, "Rare", "card", 0), "all selectable finishes route");
+        Equal(EffectSurface.None, EffectFinishSelector.Select(EffectSurface.None,
+            FinishAssignment.SingleFinish, finish, "Rare", "card", 0), "new finishes cannot bypass permission");
+    }
+    Equal(EffectSurface.None, EffectSurfaceParser.Parse("DiffractiveFoil"), "experiments stay opt-in runtime overrides");
     Near(0.25f, new EffectContext(EffectPresentation.Grid).IntensityScale, 0.0001f, "grid intensity is independent");
     Near(0.5f, new EffectContext(EffectPresentation.Hand).IntensityScale, 0.0001f, "hand intensity is independent");
     Near(0.75f, new EffectContext(EffectPresentation.Reward).IntensityScale, 0.0001f, "reward intensity is independent");

@@ -135,12 +135,35 @@ internal static class EffectOverlayManager
         foreach (Node node in tree.GetNodesInGroup(OverlayGroup))
         {
             if (node is TextureRect overlay && !overlay.IsQueuedForDeletion()
-                && overlay.IsVisibleInTree() && overlay.GetParent() is CanvasItem portrait)
+                && overlay.IsVisibleInTree() && overlay.GetParent() is TextureRect portrait)
             {
                 // Modulate is inherited; copying it here would dim twice.
                 overlay.SelfModulate = portrait.SelfModulate;
+                UpdateLightTilt(overlay, portrait);
             }
         }
+    }
+
+    private static void UpdateLightTilt(TextureRect overlay, TextureRect portrait)
+    {
+        if (overlay.Material is not ShaderMaterial material) return;
+        Vector2 target = Vector2.Zero;
+        Vector2 size = portrait.Size;
+        if (FullArtModConfig.EffectFollowPointer && !FullArtModConfig.ReducedMotion
+            && portrait.IsInsideTree() && overlay.IsInsideTree()
+            && float.IsFinite(size.X) && float.IsFinite(size.Y) && size.X > 0f && size.Y > 0f
+            && portrait.GetViewport() is { } viewport && GodotObject.IsInstanceValid(viewport)
+            && overlay.GetViewport() == viewport)
+        {
+            Vector2 position = portrait.GetLocalMousePosition();
+            var pointer = LayerPolicy.Pointer(position.X / size.X * 2f - 1f,
+                position.Y / size.Y * 2f - 1f, false);
+            target = new Vector2(pointer.X, pointer.Y);
+        }
+        Vector2 previous = material.GetShaderParameter("view_tilt").AsVector2();
+        float blend = FullArtModConfig.ReducedMotion || !FullArtModConfig.EffectFollowPointer
+            ? 1f : 1f - MathF.Exp(-12f * (float)overlay.GetProcessDeltaTime());
+        material.SetShaderParameter("view_tilt", previous.Lerp(target, blend));
     }
 
     private static TextureRect? FindOverlay(TextureRect portrait)

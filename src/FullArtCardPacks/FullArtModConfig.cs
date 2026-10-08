@@ -18,6 +18,7 @@ public class FullArtModConfig : SimpleModConfig
 
     public static FinishAssignment FinishAssignment { get; set; } = FinishAssignment.PackDefault;
     public static TrialFinish SingleFinish { get; set; } = TrialFinish.Foil;
+    public static bool EffectFollowPointer { get; set; } = true;
 
     [ConfigSlider(0, 999, 1, Format = "{0:F0}")]
     public static int FinishSeed { get; set; } = 0;

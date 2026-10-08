@@ -10,6 +10,17 @@ internal enum EffectSurface
     BrushedSilver = 5,
     Ember = 6,
     Frost = 7,
+    DiffractiveFoil = 8,
+    EtchedFoil = 9,
+    GlitterFoil = 10,
+    CrackedIce = 11,
+    OilSlick = 12,
+    Pearlescent = 13,
+    Embossed = 14,
+    Lenticular = 15,
+    Aurora = 16,
+    Starfield = 17,
+    Circuit = 18,
 }
 
 internal static class EffectSurfaceParser

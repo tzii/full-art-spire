@@ -68,6 +68,8 @@ internal static class EffectRenderer
             material.SetShaderParameter("intensity", decision.Intensity * context.IntensityScale);
             material.SetShaderParameter("phase", decision.Phase);
             material.SetShaderParameter("motion_scale", FullArtModConfig.ReducedMotion ? 0f : motionScale);
+            // Pooled portraits start neutral. The tree callback supplies live local tilt.
+            material.SetShaderParameter("view_tilt", Vector2.Zero);
             return material;
         }
         catch (Exception ex)
