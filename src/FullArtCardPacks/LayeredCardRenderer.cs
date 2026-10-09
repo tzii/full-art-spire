@@ -13,6 +13,11 @@ internal static class LayeredCardRenderer
     private readonly record struct ValidationKey(ulong Background, ulong Foreground, ulong Mask, string Channel,
         LayerRegistration? Registration, LayerCanvas BackgroundSize, LayerCanvas ForegroundSize, LayerCanvas MaskSize);
     private static readonly LruCache<ValidationKey, bool> ValidationCache = new(64);
+    // Survives texture eviction: an unchanged file set (same paths, sizes and
+    // write times) needs no second GPU readback and pixel scan.
+    private static readonly LruCache<string, bool> FileValidationCache = new(1024, StringComparer.Ordinal);
+    // Seconds^-1 for easing layer motion toward the pointer target.
+    private const float PointerResponse = 10f;
     private static readonly LruCache<string, bool> Warnings = new(128, StringComparer.OrdinalIgnoreCase);
     private static Shader? _shader;
     private static bool _shaderAttempted;
@@ -24,6 +29,7 @@ internal static class LayeredCardRenderer
     internal static void InvalidateResources()
     {
         ValidationCache.Clear();
+        FileValidationCache.Clear();
         Warnings.Clear();
         _shader = null;
         _shaderAttempted = false;
@@ -69,7 +75,9 @@ internal static class LayeredCardRenderer
             material.SetShaderParameter("subject_offset_y", decision.SubjectOffsetY);
             material.SetShaderParameter("shadow_strength", decision.ShadowStrength);
             material.SetShaderParameter("frame_inset", decision.FrameInset);
+            material.SetShaderParameter("pop_strength", Math.Clamp(FullArtModConfig.SubjectPop, 0f, 1f));
             overlay.Material = material;
+            overlay.TextureFilter = CanvasItem.TextureFilterEnum.LinearWithMipmaps;
             // KeepAspectCovered derives UV from the original source, even
             // when the registered clean plate differs by integer rounding.
             overlay.Texture = textures.NormalizedSourceUv ? textures.Foreground : textures.Background;
@@ -144,6 +152,12 @@ internal static class LayeredCardRenderer
             maskTexture?.GetInstanceId() ?? 0, layers.ForegroundMaskChannel, registration, backgroundSize, foregroundSize, maskSize);
         var textures = new LayerTextures(backgroundTexture, foregroundTexture, maskTexture, registration is not null);
         if (ValidationCache.TryGetValue(validationKey, out bool valid)) return valid ? textures : null;
+        string? fileKey = FileValidationKey(validationKey, backgroundPath, foregroundPath, useMask ? maskPath : null);
+        if (fileKey is not null && FileValidationCache.TryGetValue(fileKey, out valid))
+        {
+            ValidationCache.Set(validationKey, valid);
+            return valid ? textures : null;
+        }
         try
         {
             using Image background = backgroundTexture.GetImage();
@@ -167,6 +181,9 @@ internal static class LayeredCardRenderer
                     || (registration is null && mask.GetSize() != foreground.GetSize()))
                     throw new InvalidDataException("Foreground mask must match the source canvas.");
                 // Conversion is in memory only. The original source PNG is never rewritten.
+                // Validation reads only the base level of the mipmapped copies.
+                mask.ClearMipmaps();
+                foreground.ClearMipmaps();
                 mask.Convert(Image.Format.Rgba8);
                 foreground.Convert(Image.Format.Rgba8);
                 if (!LayerPolicy.IsValidForegroundMask(mask.GetData(), foreground.GetData(), mask.GetWidth(), mask.GetHeight(),
@@ -174,6 +191,7 @@ internal static class LayeredCardRenderer
                     throw new InvalidDataException("Foreground mask needs visible and hidden regions in its selected red/alpha channel; red masks must be opaque near-grayscale.");
             }
             ValidationCache.Set(validationKey, true);
+            if (fileKey is not null) FileValidationCache.Set(fileKey, true);
             return textures;
         }
         catch (Exception ex)
@@ -181,7 +199,21 @@ internal static class LayeredCardRenderer
             WarnOnce(key, $"Could not load layered card {layers.Background}: {ex.Message}");
         }
         ValidationCache.Set(validationKey, false);
+        if (fileKey is not null) FileValidationCache.Set(fileKey, false);
         return null;
+    }
+
+    private static string? FileValidationKey(ValidationKey key, string background, string foreground, string? mask)
+    {
+        var builder = new System.Text.StringBuilder();
+        foreach (string? path in new[] { background, foreground, mask })
+        {
+            if (path is null) { builder.Append("-|"); continue; }
+            var info = new FileInfo(path);
+            if (!info.Exists) return null;
+            builder.Append(path).Append('|').Append(info.Length).Append('|').Append(info.LastWriteTimeUtc.Ticks).Append('|');
+        }
+        return builder.Append(key with { Background = 0, Foreground = 0, Mask = 0 }).ToString();
     }
 
     private static TextureRect Create(TextureRect portrait)
@@ -248,6 +280,7 @@ internal static class LayeredCardRenderer
         Vector2 pointer = Vector2.Zero;
         Vector2 size = portrait.Size;
         float depth = material.GetShaderParameter("depth").AsSingle();
+        bool attached = portrait.IsInsideTree() && overlay.IsInsideTree();
         if (!FullArtModConfig.ReducedMotion && float.IsFinite(depth) && depth > 0f
             && float.IsFinite(size.X) && float.IsFinite(size.Y) && size.X > 0f && size.Y > 0f
             && portrait.IsInsideTree() && overlay.IsInsideTree() && overlay.GetParent() == portrait
@@ -260,6 +293,12 @@ internal static class LayeredCardRenderer
             pointer = new Vector2(normalized.X, normalized.Y);
         }
         material.SetShaderParameter("pointer", pointer);
+        // Ease toward the target so layers glide in and settle back; detached,
+        // pooled or reduced-motion cards snap so no stale pose survives.
+        Vector2 previous = material.GetShaderParameter("view_pointer").AsVector2();
+        float blend = !attached || FullArtModConfig.ReducedMotion || !float.IsFinite(previous.X) || !float.IsFinite(previous.Y)
+            ? 1f : 1f - MathF.Exp(-PointerResponse * (float)overlay.GetProcessDeltaTime());
+        material.SetShaderParameter("view_pointer", previous.Lerp(pointer, blend));
     }
 
     private static TextureRect? Find(TextureRect portrait)

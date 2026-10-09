@@ -8,7 +8,8 @@ internal static class TextureCache
 
     // Image count, not card count. Includes negative entries. Native controls
     // may retain live textures outside this bounded set after LRU eviction.
-    internal const int Capacity = 48;
+    // 96 images is about 32 layered cards, roughly 600 MB of mipmapped VRAM.
+    internal const int Capacity = 96;
     private static readonly LruCache<string, Texture2D?> Cache = new(Capacity, StringComparer.OrdinalIgnoreCase);
 
     internal static void Invalidate() => Cache.Clear();
@@ -42,9 +43,12 @@ internal static class TextureCache
             using Image? image = Image.LoadFromFile(artPath);
             if (image is null || image.IsEmpty())
                 throw new InvalidDataException("Texture could not be decoded.");
+            // Cards render far below 1024 px in hands and grids; mipmaps keep
+            // them from aliasing. Compressed images keep their own levels.
+            if (!image.HasMipmaps() && !image.IsCompressed())
+                image.GenerateMipmaps();
             texture = ImageTexture.CreateFromImage(image);
             Cache.Set(artPath, texture);
-            GD.Print($"[{ModId}] Loaded texture: {relativePath}");
             return texture is not null;
         }
         catch (Exception ex)

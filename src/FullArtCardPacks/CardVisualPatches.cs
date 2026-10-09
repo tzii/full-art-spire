@@ -13,6 +13,9 @@ internal static class PortraitPatch
 {
     private static readonly FieldInfo? PortraitField = typeof(NCard).GetField("_portrait", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
     private static readonly FieldInfo? AncientPortraitField = typeof(NCard).GetField("_ancientPortrait", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+    // Per-refresh logging flooded godot.log; report each card type once.
+    private static readonly HashSet<string> Reported = new(StringComparer.Ordinal);
+    private static readonly HashSet<string> MissedLayout = new(StringComparer.Ordinal);
 
     static PortraitPatch()
     {
@@ -40,6 +43,11 @@ internal static class PortraitPatch
     {
         // Reload also runs when locked/unknown visibility changes, without an
         // UpdateVisuals call. Refresh the child before the next frame is drawn.
+        string? cardId = __instance.Model?.GetType().FullName;
+        if (FullArtPackRegistry.HasReplacement(cardId)
+            && PortraitField?.GetValue(__instance) is TextureRect { Visible: true }
+            && MissedLayout.Add(cardId!))
+            GD.PushWarning($"[FullArtCardPacks] Full-art layout was not applied to {cardId}; it shows the standard frame.");
         TryReplacePortrait(__instance, new EffectContext(EffectPresentation.Unknown));
     }
 
@@ -58,16 +66,19 @@ internal static class PortraitPatch
             string cardId = model.GetType().FullName ?? model.GetType().Name;
             if (TryGetReplacementTexture(cardId, out Texture2D? texture) && texture is not null)
             {
-                GD.Print($"[FullArtCardPacks] Replacing portrait for {cardId}");
+                if (Reported.Add(cardId))
+                    GD.Print($"[FullArtCardPacks] Replacing portrait for {cardId}");
                 if (PortraitField?.GetValue(cardNode) is TextureRect portrait)
                 {
                     portrait.Texture = texture;
                     portrait.StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered;
+                    portrait.TextureFilter = CanvasItem.TextureFilterEnum.LinearWithMipmaps;
                 }
                 if (AncientPortraitField?.GetValue(cardNode) is TextureRect ancientPortrait)
                 {
                     ancientPortrait.Texture = texture;
                     ancientPortrait.StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered;
+                    ancientPortrait.TextureFilter = CanvasItem.TextureFilterEnum.LinearWithMipmaps;
                     ancientPortrait.Visible = true;
                 }
             }
@@ -100,24 +111,31 @@ internal static class CardRenderRaritySpoofPatch
     [HarmonyPostfix]
     private static void Postfix(CardModel __instance, ref CardRarity __result)
     {
-        if ((int)__result == 5)
+        if (__result == CardRarity.Ancient || (!_spoofForCardReload && !_treatMappedBasicCardsAsCommonInLibrary))
         {
             return;
         }
 
         string cardId = __instance.GetType().FullName ?? __instance.GetType().Name;
-        if (_treatMappedBasicCardsAsCommonInLibrary
-            && __result == CardRarity.Basic
-            && FullArtPackRegistry.HasReplacement(cardId))
+        __result = Decide(__result, _spoofForCardReload, _treatMappedBasicCardsAsCommonInLibrary,
+            FullArtPackRegistry.HasReplacement(cardId));
+    }
+
+    // The Compendium reloads its card nodes inside FilterCards, so both scopes
+    // can be active at once. A reload must win: otherwise mapped Basic cards
+    // (Bash, Strikes, Defends) read Common and keep the standard frame.
+    internal static CardRarity Decide(CardRarity rarity, bool reloading, bool libraryFilter, bool hasReplacement)
+    {
+        if (rarity == CardRarity.Ancient || (!reloading && !libraryFilter) || !hasReplacement)
         {
-            __result = CardRarity.Common;
-            return;
+            return rarity;
         }
 
-        if (_spoofForCardReload && FullArtPackRegistry.HasReplacement(cardId))
+        if (reloading)
         {
-            __result = (CardRarity)5;
+            return CardRarity.Ancient;
         }
+        return rarity == CardRarity.Basic ? CardRarity.Common : rarity;
     }
 
     internal static bool BeginSpoofFor(NCard cardNode)

@@ -13,6 +13,10 @@ public class FullArtModConfig : SimpleModConfig
     [ConfigSlider(0, 1, 0.05, Format = "{0:F2}")]
     public static float PortraitParallax { get; set; } = 0.5f;
 
+    // Shadow, rim light and background recession that separate the character.
+    [ConfigSlider(0, 1, 0.05, Format = "{0:F2}")]
+    public static float SubjectPop { get; set; } = 0.5f;
+
     public static bool EnableEffects { get; set; } = false;
 
     [ConfigSlider(0, 1, 0.05, Format = "{0:F2}")]

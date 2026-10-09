@@ -10,6 +10,8 @@ internal static class FullArtPackRegistry
 
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
     private static readonly Dictionary<string, FullArtCardEntry> CardsByRuntimeModel = new(StringComparer.OrdinalIgnoreCase);
+    // The Rarity getter asks this during every card reload; avoid a disk check per call.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> ReplacementCache = new(StringComparer.OrdinalIgnoreCase);
 
     internal static FullArtConfig Config { get; set; } = new() { EnabledPacks = new List<string> { "silent" } };
     internal static string ModDirectory { get; private set; } = "";
@@ -23,6 +25,7 @@ internal static class FullArtPackRegistry
         EffectRenderer.InvalidateResources();
         ModDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "";
         CardsByRuntimeModel.Clear();
+        ReplacementCache.Clear();
         Config = LoadConfig();
 
         if (!Config.Enabled)
@@ -43,17 +46,19 @@ internal static class FullArtPackRegistry
             LoadPack(pool);
         }
 
+        ReplacementCache.Clear();
         GD.Print($"[{ModId}] loaded {CardsByRuntimeModel.Count} card art mappings.");
     }
 
     internal static bool HasReplacement(string? runtimeModel)
     {
-        return !string.IsNullOrWhiteSpace(runtimeModel)
-            && CardsByRuntimeModel.TryGetValue(runtimeModel, out FullArtCardEntry? entry)
+        if (string.IsNullOrWhiteSpace(runtimeModel)) return false;
+        return ReplacementCache.GetOrAdd(runtimeModel, model =>
+            CardsByRuntimeModel.TryGetValue(model, out FullArtCardEntry? entry)
             && !entry.PreserveOriginalLayout
             && !string.IsNullOrWhiteSpace(entry.Art)
             && TryResolveModPath(entry.Art, out string artPath)
-            && File.Exists(artPath);
+            && File.Exists(artPath));
     }
 
     internal static bool TryGetCard(string? runtimeModel, out FullArtCardEntry? entry)
