@@ -6,6 +6,9 @@ public class FullArtModConfig : SimpleModConfig
 {
     public static bool EnableLayeredCards { get; set; } = true;
 
+    // Decode card art off the main thread; the native portrait shows until it is ready.
+    public static bool BackgroundTextureLoading { get; set; } = true;
+
     [ConfigSlider(0, 1, 0.05, Format = "{0:F2}")]
     public static float LayerDepth { get; set; } = 1f;
 

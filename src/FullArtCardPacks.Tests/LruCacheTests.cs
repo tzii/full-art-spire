@@ -14,8 +14,9 @@ internal static class LruCacheTests
         var first=new Resource();var second=new Resource();var third=new Resource();
         cache.Set("first",first);cache.Set("second",second);
         Require(cache.TryGetValue("FIRST",out var loaded)&&ReferenceEquals(first,loaded),"LRU preserves path comparer and identity");
+        Require(cache.ContainsKey("second"),"membership check finds an entry");
         cache.Set("third",third);
-        Require(cache.Count==2&&!cache.TryGetValue("second",out _),"LRU evicts least recently read entry");
+        Require(cache.Count==2&&!cache.TryGetValue("second",out _),"LRU evicts least recently read entry; membership does not promote");
         Require(!second.Disposed,"Eviction must not dispose a potentially live resource");
         cache.Set("missing",null);
         Require(cache.TryGetValue("missing",out var missing)&&missing is null,"Negative entries are cached and bounded");

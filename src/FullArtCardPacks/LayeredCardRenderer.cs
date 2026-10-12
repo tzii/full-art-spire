@@ -8,8 +8,9 @@ internal static class LayeredCardRenderer
 {
     private const string OverlayName = "_full_art_layered_card";
     private const string OverlayGroup = "full_art_card_packs_layered_cards";
-    // Validation caches no textures. New texture IDs after eviction/reload
-    // require fresh validation, even when their filenames have not changed.
+    private static readonly StringName LayerKeyMeta = "full_art_card_packs_layer_key";
+    // Validation caches no textures. New instances reuse a file-set verdict
+    // when the paths, file sizes and write times are unchanged.
     private readonly record struct ValidationKey(ulong Background, ulong Foreground, ulong Mask, string Channel,
         LayerRegistration? Registration, LayerCanvas BackgroundSize, LayerCanvas ForegroundSize, LayerCanvas MaskSize);
     private static readonly LruCache<ValidationKey, bool> ValidationCache = new(64);
@@ -43,9 +44,24 @@ internal static class LayeredCardRenderer
                 || entry is null
                 || !LayerPolicy.TryDecide(entry, FullArtModConfig.EnableLayeredCards,
                     cardNode.Visibility == ModelVisibility.Visible, FullArtModConfig.LayerDepth, out var decision)
-                || PortraitResolver.Resolve(cardNode) is not { Texture: not null } portrait
-                || LoadTextures(entry) is not { } textures
-                || LoadShader() is not { } shader)
+                || PortraitResolver.Resolve(cardNode) is not { Texture: not null } portrait)
+            {
+                Clear(cardNode);
+                return;
+            }
+            LayerTextures? loaded = LoadTextures(entry, out string layerKey, out bool pending);
+            if (pending)
+            {
+                PendingArtRefresh.Track(cardNode);
+                // An overlay already showing these layers keeps its material's
+                // textures; anything else falls back to flat until delivery.
+                if (Find(portrait) is { } current && current.GetMeta(LayerKeyMeta, "").AsString() == layerKey)
+                    UpdatePointer(current, portrait);
+                else
+                    Clear(cardNode);
+                return;
+            }
+            if (loaded is not { } textures || LoadShader() is not { } shader)
             {
                 Clear(cardNode);
                 return;
@@ -77,6 +93,7 @@ internal static class LayeredCardRenderer
             material.SetShaderParameter("frame_inset", decision.FrameInset);
             material.SetShaderParameter("pop_strength", Math.Clamp(FullArtModConfig.SubjectPop, 0f, 1f));
             overlay.Material = material;
+            overlay.SetMeta(LayerKeyMeta, layerKey);
             overlay.TextureFilter = CanvasItem.TextureFilterEnum.LinearWithMipmaps;
             // KeepAspectCovered derives UV from the original source, even
             // when the registered clean plate differs by integer rounding.
@@ -116,8 +133,15 @@ internal static class LayeredCardRenderer
         return _shader;
     }
 
-    private static LayerTextures? LoadTextures(FullArtCardEntry entry)
+    private readonly record struct LayerSpec(LayerRegistration? Registration, bool UseMask, bool SourceIsArt, string Channel);
+
+    // Queue a complete layer set before the flat path requests the same source.
+    internal static void Preload(FullArtCardEntry entry) => LoadTextures(entry, out _, out _);
+
+    private static LayerTextures? LoadTextures(FullArtCardEntry entry, out string key, out bool pending)
     {
+        key = "";
+        pending = false;
         FullArtLayerMetadata layers = entry.Layers!;
         if (!LayerPolicy.TryGetRegistration(layers, out var registration)
             || !FullArtPackRegistry.TryResolveModPath(layers.Background, out string backgroundPath)
@@ -125,34 +149,53 @@ internal static class LayeredCardRenderer
             return null;
         // Identity precedes every positive cache shortcut. A duplicate file
         // with equal bytes is not the original driving the native crop.
-        if (registration is not null && (!FullArtPackRegistry.TryResolveModPath(entry.Art, out string sourcePath)
-            || !string.Equals(sourcePath, foregroundPath, StringComparison.OrdinalIgnoreCase))) return null;
+        bool sourceIsArt = FullArtPackRegistry.TryResolveModPath(entry.Art, out string artPath)
+            && string.Equals(artPath, foregroundPath, StringComparison.OrdinalIgnoreCase);
+        if (registration is not null && !sourceIsArt) return null;
         bool useMask = layers.ForegroundMask.Length != 0;
         string maskPath = "";
         if (useMask && !FullArtPackRegistry.TryResolveModPath(layers.ForegroundMask, out maskPath))
             return null;
-        string key = backgroundPath + "\n" + foregroundPath + "\n" + maskPath + "\n" + layers.ForegroundMaskChannel;
+        key = backgroundPath + "\n" + foregroundPath + "\n" + maskPath + "\n" + layers.ForegroundMaskChannel;
+        var spec = new LayerSpec(registration, useMask, sourceIsArt, layers.ForegroundMaskChannel);
+        return TextureCache.BackgroundLoading
+            ? LoadInBackground(spec, key, backgroundPath, foregroundPath, maskPath, out pending)
+            : LoadNow(spec, key, backgroundPath, foregroundPath, maskPath, layers);
+    }
+
+    // Existing generated RGBA and masked 2:3 packs keep their contract. A
+    // newly admitted original canvas must use the very same source as the
+    // flat portrait, so both TextureRects inherit an identical crop.
+    private static bool AdmitsForeground(LayerSpec spec, int width, int height)
+        => width * 3L == height * 2L || (spec.UseMask && spec.SourceIsArt);
+
+    private static LayerTextures? Admit(LayerSpec spec, Texture2D background, Texture2D foreground, Texture2D? mask,
+        out ValidationKey validationKey)
+    {
+        var backgroundSize = new LayerCanvas(background.GetWidth(), background.GetHeight());
+        var foregroundSize = new LayerCanvas(foreground.GetWidth(), foreground.GetHeight());
+        var maskSize = mask is null ? default : new LayerCanvas(mask.GetWidth(), mask.GetHeight());
+        validationKey = new ValidationKey(background.GetInstanceId(), foreground.GetInstanceId(),
+            mask?.GetInstanceId() ?? 0, spec.Channel, spec.Registration, backgroundSize, foregroundSize, maskSize);
+        return AdmitsForeground(spec, foregroundSize.Width, foregroundSize.Height)
+            ? new LayerTextures(background, foreground, mask, spec.Registration is not null)
+            : null;
+    }
+
+    // Main thread: loads now and validates by GPU readback when needed.
+    private static LayerTextures? LoadNow(LayerSpec spec, string key, string backgroundPath, string foregroundPath,
+        string maskPath, FullArtLayerMetadata layers)
+    {
         if (!TextureCache.TryLoadPath(layers.Background, out Texture2D? backgroundTexture)
             || !TextureCache.TryLoadPath(layers.Foreground, out Texture2D? foregroundTexture))
             return null;
         Texture2D? maskTexture = null;
-        if (useMask && !TextureCache.TryLoadPath(layers.ForegroundMask, out maskTexture))
+        if (spec.UseMask && !TextureCache.TryLoadPath(layers.ForegroundMask, out maskTexture))
             return null;
-        // Existing generated RGBA and masked 2:3 packs keep their contract.
-        // A newly admitted original canvas must use the very same source as
-        // the flat portrait, so both TextureRects inherit an identical crop.
-        if (foregroundTexture!.GetWidth() * 3L != foregroundTexture.GetHeight() * 2L
-            && (!useMask || !FullArtPackRegistry.TryResolveModPath(entry.Art, out string artPath)
-                || !string.Equals(artPath, foregroundPath, StringComparison.OrdinalIgnoreCase)))
+        if (Admit(spec, backgroundTexture!, foregroundTexture!, maskTexture, out var validationKey) is not { } textures)
             return null;
-        var backgroundSize = new LayerCanvas(backgroundTexture!.GetWidth(), backgroundTexture.GetHeight());
-        var foregroundSize = new LayerCanvas(foregroundTexture!.GetWidth(), foregroundTexture.GetHeight());
-        var maskSize = maskTexture is null ? default : new LayerCanvas(maskTexture.GetWidth(), maskTexture.GetHeight());
-        var validationKey = new ValidationKey(backgroundTexture.GetInstanceId(), foregroundTexture.GetInstanceId(),
-            maskTexture?.GetInstanceId() ?? 0, layers.ForegroundMaskChannel, registration, backgroundSize, foregroundSize, maskSize);
-        var textures = new LayerTextures(backgroundTexture, foregroundTexture, maskTexture, registration is not null);
         if (ValidationCache.TryGetValue(validationKey, out bool valid)) return valid ? textures : null;
-        string? fileKey = FileValidationKey(validationKey, backgroundPath, foregroundPath, useMask ? maskPath : null);
+        string? fileKey = FileValidationKey(spec, backgroundPath, foregroundPath, spec.UseMask ? maskPath : null);
         if (fileKey is not null && FileValidationCache.TryGetValue(fileKey, out valid))
         {
             ValidationCache.Set(validationKey, valid);
@@ -160,50 +203,126 @@ internal static class LayeredCardRenderer
         }
         try
         {
-            using Image background = backgroundTexture.GetImage();
-            using Image foreground = foregroundTexture.GetImage();
+            using Image background = backgroundTexture!.GetImage();
+            using Image foreground = foregroundTexture!.GetImage();
             using Image? mask = maskTexture?.GetImage();
-            if (useMask && mask is null)
-                throw new InvalidDataException("A required foreground mask could not be decoded.");
-            if (registration is { } declared && (declared.Source != foregroundSize || declared.Background != backgroundSize
-                || declared.Mask != maskSize))
-                throw new InvalidDataException("Normalized source UV registration dimensions differ from actual textures.");
-            if (background.IsEmpty() || foreground.IsEmpty()
-                || (registration is null && background.GetSize() != foreground.GetSize())
-                || !LayerPolicy.IsValidCanvas(background.GetWidth(), background.GetHeight(), useMask)
-                || !LayerPolicy.IsValidCanvas(foreground.GetWidth(), foreground.GetHeight(), useMask)
-                || background.DetectAlpha() != Image.AlphaMode.None
-                || (!useMask && foreground.DetectAlpha() == Image.AlphaMode.None) || foreground.IsInvisible())
-                throw new InvalidDataException("Layers require matching bounded portrait canvases, an opaque background, and visible coverage; unmasked RGBA layers require 2:3.");
-            if (mask is not null)
-            {
-                if (mask.IsEmpty() || !LayerPolicy.IsValidCanvas(mask.GetWidth(), mask.GetHeight(), true)
-                    || (registration is null && mask.GetSize() != foreground.GetSize()))
-                    throw new InvalidDataException("Foreground mask must match the source canvas.");
-                // Conversion is in memory only. The original source PNG is never rewritten.
-                // Validation reads only the base level of the mipmapped copies.
-                mask.ClearMipmaps();
-                foreground.ClearMipmaps();
-                mask.Convert(Image.Format.Rgba8);
-                foreground.Convert(Image.Format.Rgba8);
-                if (!LayerPolicy.IsValidForegroundMask(mask.GetData(), foreground.GetData(), mask.GetWidth(), mask.GetHeight(),
-                    foreground.GetWidth(), foreground.GetHeight(), layers.ForegroundMaskChannel))
-                    throw new InvalidDataException("Foreground mask needs visible and hidden regions in its selected red/alpha channel; red masks must be opaque near-grayscale.");
-            }
-            ValidationCache.Set(validationKey, true);
-            if (fileKey is not null) FileValidationCache.Set(fileKey, true);
-            return textures;
+            ValidateImages(background, foreground, mask, spec);
+            valid = true;
         }
         catch (Exception ex)
         {
             WarnOnce(key, $"Could not load layered card {layers.Background}: {ex.Message}");
+            valid = false;
         }
-        ValidationCache.Set(validationKey, false);
-        if (fileKey is not null) FileValidationCache.Set(fileKey, false);
-        return null;
+        ValidationCache.Set(validationKey, valid);
+        if (fileKey is not null) FileValidationCache.Set(fileKey, valid);
+        return valid ? textures : null;
     }
 
-    private static string? FileValidationKey(ValidationKey key, string background, string foreground, string? mask)
+    // Cached textures with a known verdict return at once. Otherwise a worker
+    // decodes and validates a new file set, or the texture cache reloads an
+    // evicted one, and the card is refreshed when the results arrive.
+    private static LayerTextures? LoadInBackground(LayerSpec spec, string key, string backgroundPath,
+        string foregroundPath, string maskPath, out bool pending)
+    {
+        pending = false;
+        Texture2D? background = null, foreground = null, mask = null;
+        if (TextureCache.TryGetCached(backgroundPath, out background) && TextureCache.TryGetCached(foregroundPath, out foreground)
+            && (!spec.UseMask || TextureCache.TryGetCached(maskPath, out mask)))
+        {
+            if (background is null || foreground is null || (spec.UseMask && mask is null)) return null;
+            if (Admit(spec, background, foreground, mask, out var cachedKey) is not { } cached) return null;
+            if (ValidationCache.TryGetValue(cachedKey, out bool known)) return known ? cached : null;
+        }
+        string? fileKey = FileValidationKey(spec, backgroundPath, foregroundPath, spec.UseMask ? maskPath : null);
+        if (fileKey is null)
+        {
+            WarnOnce(key, $"Layered card file missing: {key.Replace('\n', ' ')}");
+            return null;
+        }
+        if (!FileValidationCache.TryGetValue(fileKey, out bool valid))
+        {
+            string[] paths = spec.UseMask
+                ? new[] { backgroundPath, foregroundPath, maskPath }
+                : new[] { backgroundPath, foregroundPath };
+            string warningKey = key;
+            pending = TextureCache.RequestSet("layers\n" + fileKey, paths, images =>
+                {
+                    ValidateImages(images[0]!, images[1]!, spec.UseMask ? images[2] : null, spec);
+                    return null;
+                },
+                error =>
+                {
+                    FileValidationCache.Set(fileKey, error is null);
+                    if (error is not null) WarnOnce(warningKey, $"Could not load layered card {backgroundPath}: {error}");
+                });
+            return null;
+        }
+        if (!valid) return null;
+        TextureState[] states =
+        {
+            TextureCache.RequestResolved(backgroundPath, out background),
+            TextureCache.RequestResolved(foregroundPath, out foreground),
+            spec.UseMask ? TextureCache.RequestResolved(maskPath, out mask) : TextureState.Ready,
+        };
+        if (states.Contains(TextureState.Failed)) return null;
+        if (states.Contains(TextureState.Pending))
+        {
+            pending = true;
+            return null;
+        }
+        if (Admit(spec, background!, foreground!, mask, out var validationKey) is not { } textures) return null;
+        ValidationCache.Set(validationKey, true);
+        return textures;
+    }
+
+    // Throws for a rejected layer set. Safe on a worker thread: it only reads
+    // the given images and converts private copies.
+    private static void ValidateImages(Image background, Image foreground, Image? mask, LayerSpec spec)
+    {
+        if (spec.UseMask && mask is null)
+            throw new InvalidDataException("A required foreground mask could not be decoded.");
+        var backgroundSize = new LayerCanvas(background.GetWidth(), background.GetHeight());
+        var foregroundSize = new LayerCanvas(foreground.GetWidth(), foreground.GetHeight());
+        var maskSize = mask is null ? default : new LayerCanvas(mask.GetWidth(), mask.GetHeight());
+        if (!AdmitsForeground(spec, foregroundSize.Width, foregroundSize.Height))
+            throw new InvalidDataException("Generated or unmasked foregrounds must be 2:3 unless they are the card's own source art.");
+        if (spec.Registration is { } declared && (declared.Source != foregroundSize || declared.Background != backgroundSize
+            || declared.Mask != maskSize))
+            throw new InvalidDataException("Normalized source UV registration dimensions differ from actual textures.");
+        if (background.IsEmpty() || foreground.IsEmpty()
+            || (spec.Registration is null && background.GetSize() != foreground.GetSize())
+            || !LayerPolicy.IsValidCanvas(background.GetWidth(), background.GetHeight(), spec.UseMask)
+            || !LayerPolicy.IsValidCanvas(foreground.GetWidth(), foreground.GetHeight(), spec.UseMask)
+            || background.DetectAlpha() != Image.AlphaMode.None
+            || (!spec.UseMask && foreground.DetectAlpha() == Image.AlphaMode.None) || foreground.IsInvisible())
+            throw new InvalidDataException("Layers require matching bounded portrait canvases, an opaque background, and visible coverage; unmasked RGBA layers require 2:3.");
+        if (mask is null) return;
+        if (mask.IsEmpty() || !LayerPolicy.IsValidCanvas(mask.GetWidth(), mask.GetHeight(), true)
+            || (spec.Registration is null && mask.GetSize() != foreground.GetSize()))
+            throw new InvalidDataException("Foreground mask must match the source canvas.");
+        // Conversion is in memory only, on copies; the source PNG is never
+        // rewritten. Validation reads only the base level.
+        using Image maskData = BaseLevelRgba8(mask);
+        using Image foregroundData = BaseLevelRgba8(foreground);
+        if (!LayerPolicy.IsValidForegroundMask(maskData.GetData(), foregroundData.GetData(), maskData.GetWidth(),
+            maskData.GetHeight(), foregroundData.GetWidth(), foregroundData.GetHeight(), spec.Channel))
+            throw new InvalidDataException("Foreground mask needs visible and hidden regions in its selected red/alpha channel; red masks must be opaque near-grayscale.");
+    }
+
+    private static Image BaseLevelRgba8(Image source)
+    {
+        var copy = new Image();
+        copy.CopyFrom(source);
+        copy.ClearMipmaps();
+        copy.Convert(Image.Format.Rgba8);
+        return copy;
+    }
+
+    // Survives texture eviction: an unchanged file set needs no second decode
+    // and pixel scan. Sizes follow from the bytes that path, length and write
+    // time identify.
+    private static string? FileValidationKey(LayerSpec spec, string background, string foreground, string? mask)
     {
         var builder = new System.Text.StringBuilder();
         foreach (string? path in new[] { background, foreground, mask })
@@ -213,7 +332,7 @@ internal static class LayeredCardRenderer
             if (!info.Exists) return null;
             builder.Append(path).Append('|').Append(info.Length).Append('|').Append(info.LastWriteTimeUtc.Ticks).Append('|');
         }
-        return builder.Append(key with { Background = 0, Foreground = 0, Mask = 0 }).ToString();
+        return builder.Append(spec).ToString();
     }
 
     private static TextureRect Create(TextureRect portrait)

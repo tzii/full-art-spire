@@ -15,6 +15,7 @@ static void Near(float expected, float actual, float tolerance, string message)
 try
 {
     FullArtCardPacks.Tests.LruCacheTests.Run();
+    FullArtCardPacks.Tests.BackgroundLoaderTests.Run();
     LayerPolicyTests.Run();
     RaritySpoofTests.Run();
     Equal(EffectSurface.Shimmer, EffectFinishSelector.Select(EffectSurface.Holo, FinishAssignment.ByRarity, TrialFinish.Foil, "Common", "card", 0), "common receives satin");

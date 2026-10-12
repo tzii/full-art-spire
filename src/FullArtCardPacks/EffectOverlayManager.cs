@@ -53,10 +53,31 @@ internal static class EffectOverlayManager
         // while permission masks address the exported portrait's 0..1 space.
         // Use the audited export only for the overlay, preserving native art
         // and layout on the parent TextureRect. Missing exports fail closed.
-        Texture2D? overlayTexture = portrait.Texture;
-        if (entry.PreserveOriginalLayout
-            && (!TextureCache.TryGetTexture(entry, out overlayTexture) || overlayTexture is null))
+        if (!entry.PreserveOriginalLayout)
         {
+            TextureState artState = TextureCache.Request(entry.Art, out _);
+            if (artState != TextureState.Ready)
+            {
+                if (artState == TextureState.Pending) PendingArtRefresh.Track(cardNode);
+                Clear(cardNode);
+                return;
+            }
+        }
+        Texture2D? overlayTexture = portrait.Texture;
+        if (entry.PreserveOriginalLayout)
+        {
+            TextureState sourceState = TextureCache.Request(entry.Art, out overlayTexture);
+            if (sourceState == TextureState.Pending) PendingArtRefresh.Track(cardNode);
+            if (sourceState != TextureState.Ready || overlayTexture is null)
+            {
+                Clear(cardNode);
+                return;
+            }
+        }
+        TextureState maskState = TextureCache.Request(decision.PermissionMask, out _);
+        if (maskState != TextureState.Ready)
+        {
+            if (maskState == TextureState.Pending) PendingArtRefresh.Track(cardNode);
             Clear(cardNode);
             return;
         }
@@ -93,17 +114,22 @@ internal static class EffectOverlayManager
             {
                 continue;
             }
-            EffectPresentation presentation = EffectPresentation.Unknown;
-            if (cardNode.HasMeta(PresentationMetadata))
-            {
-                int raw = cardNode.GetMeta(PresentationMetadata).AsInt32();
-                if (Enum.IsDefined(typeof(EffectPresentation), raw))
-                {
-                    presentation = (EffectPresentation)raw;
-                }
-            }
-            CardEffectPatch.ApplyOrUpdate(cardNode, new EffectContext(presentation));
+            CardEffectPatch.ApplyOrUpdate(cardNode, StoredContext(cardNode));
         }
+    }
+
+    internal static EffectContext StoredContext(NCard cardNode)
+    {
+        EffectPresentation presentation = EffectPresentation.Unknown;
+        if (cardNode.HasMeta(PresentationMetadata))
+        {
+            int raw = cardNode.GetMeta(PresentationMetadata).AsInt32();
+            if (Enum.IsDefined(typeof(EffectPresentation), raw))
+            {
+                presentation = (EffectPresentation)raw;
+            }
+        }
+        return new EffectContext(presentation);
     }
 
     private static TextureRect CreateOverlay(TextureRect portrait)

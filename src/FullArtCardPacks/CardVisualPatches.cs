@@ -55,8 +55,13 @@ internal static class PortraitPatch
     [HarmonyPatch(typeof(NCard), "OnFreedToPool")]
     private static void FreedToPoolPostfix(NCard __instance)
     {
+        PendingArtRefresh.Forget(__instance);
         LayeredCardRenderer.Clear(__instance);
     }
+
+    /// <summary>Reapplies art once background loading delivers it.</summary>
+    internal static void Refresh(NCard cardNode)
+        => TryReplacePortrait(cardNode, EffectOverlayManager.StoredContext(cardNode));
 
     private static void TryReplacePortrait(NCard cardNode, EffectContext context)
     {
@@ -64,7 +69,7 @@ internal static class PortraitPatch
         if (model is not null)
         {
             string cardId = model.GetType().FullName ?? model.GetType().Name;
-            if (TryGetReplacementTexture(cardId, out Texture2D? texture) && texture is not null)
+            if (TryGetReplacementTexture(cardNode, cardId, out Texture2D? texture) && texture is not null)
             {
                 if (Reported.Add(cardId))
                     GD.Print($"[FullArtCardPacks] Replacing portrait for {cardId}");
@@ -87,13 +92,21 @@ internal static class PortraitPatch
         CardEffectPatch.ApplyOrUpdate(cardNode, context);
     }
 
-    private static bool TryGetReplacementTexture(string cardId, out Texture2D? texture)
+    // While the art loads in the background the native portrait stays.
+    private static bool TryGetReplacementTexture(NCard cardNode, string cardId, out Texture2D? texture)
     {
         texture = null;
-        return FullArtPackRegistry.TryGetCard(cardId, out FullArtCardEntry? entry)
+        if (!(FullArtPackRegistry.TryGetCard(cardId, out FullArtCardEntry? entry)
             && entry is not null
-            && !entry.PreserveOriginalLayout
-            && TextureCache.TryGetTexture(entry, out texture);
+            && !entry.PreserveOriginalLayout))
+            return false;
+        if (TextureCache.BackgroundLoading && LayerPolicy.TryDecide(entry, FullArtModConfig.EnableLayeredCards,
+            cardNode.Visibility == MegaCrit.Sts2.Core.Entities.UI.ModelVisibility.Visible,
+            FullArtModConfig.LayerDepth, out _))
+            LayeredCardRenderer.Preload(entry);
+        TextureState state = TextureCache.Request(entry.Art, out texture);
+        if (state == TextureState.Pending) PendingArtRefresh.Track(cardNode);
+        return state == TextureState.Ready;
     }
 }
 

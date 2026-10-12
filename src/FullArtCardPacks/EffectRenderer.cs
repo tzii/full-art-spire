@@ -85,7 +85,7 @@ internal static class EffectRenderer
     {
         // The sampler's shader hint determines color/data interpretation.
         // Sharing ImageTexture objects does not add a source_color hint.
-        return TextureCache.TryLoadPath(maskPath, out Texture2D? texture) ? texture : null;
+        return TextureCache.Request(maskPath, out Texture2D? texture) == TextureState.Ready ? texture : null;
     }
 
     internal static T? TryLoadResource<T>(

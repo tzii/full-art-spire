@@ -15,6 +15,8 @@ internal sealed class LruCache<TKey,TValue> where TKey : notnull
     }
     public int Count => _items.Count;
     public IEnumerable<TValue> Values => _recency.Select(item=>item.Value);
+    // Membership only; does not promote recency.
+    internal bool ContainsKey(TKey key) => _items.ContainsKey(key);
     internal bool TryGetValue(TKey key,out TValue value)
     {
         if(!_items.TryGetValue(key,out var node)) { value=default!;return false; }
