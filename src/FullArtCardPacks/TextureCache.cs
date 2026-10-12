@@ -24,6 +24,15 @@ internal static class TextureCache
     // Paths that a pending layer-set job will deliver; single requests wait for it.
     private static readonly Dictionary<string, int> Claimed = new(StringComparer.OrdinalIgnoreCase);
     private static ulong _pumpTreeId;
+    private static bool _gpuSetting = FullArtModConfig.GpuCompressedTextures;
+
+    internal static void SettingsChanged()
+    {
+        if (_gpuSetting == FullArtModConfig.GpuCompressedTextures) return;
+        _gpuSetting = FullArtModConfig.GpuCompressedTextures;
+        Invalidate();
+        LayeredCardRenderer.InvalidateResources();
+    }
 
     /// <summary>Raised on the main thread after each frame that delivered
     /// background results, and on idle frames, so waiting cards can refresh.</summary>
@@ -169,7 +178,7 @@ internal static class TextureCache
         Image? image = null;
         try
         {
-            image = Image.LoadFromFile(path);
+            image = GpuTextureVariants.TryLoad(path) ?? Image.LoadFromFile(path);
             if (image is null || image.IsEmpty())
                 throw new InvalidDataException("Texture could not be decoded.");
             if (mipmaps) AddMipmaps(image);

@@ -8,6 +8,16 @@ uniform float phase = 0.0;
 uniform float motion_scale : hint_range(0.0, 1.0) = 0.05;
 // Local pointer tilt, bounded to [-1,1]. Zero is also the reduced-motion pose.
 uniform vec2 view_tilt = vec2(0.0);
+uniform bool use_layered_uv = false;
+uniform vec2 view_pointer = vec2(0.0);
+uniform float depth = 1.0;
+uniform float foreground_shift = 0.0;
+uniform float foreground_scale = 1.0;
+uniform float subject_scale = 1.0;
+uniform float subject_offset_x = 0.0;
+uniform float subject_offset_y = 0.0;
+uniform sampler2D layer_coverage_texture : filter_linear_mipmap, repeat_disable;
+uniform bool layer_coverage_use_alpha = false;
 
 varying float presentation_scale;
 varying vec4 card_modulate;
@@ -45,8 +55,21 @@ float filtered_line(float coordinate, float width) {
 }
 
 void fragment() {
-    vec4 source = texture(TEXTURE, UV);
-    float allowed = texture(permission_mask_texture, UV).r * source.a;
+    vec2 effect_uv = UV;
+    if (use_layered_uv) {
+        vec2 travel = clamp(view_pointer, vec2(-1.0), vec2(1.0)) * clamp(depth, 0.0, 1.0);
+        float lift = mix(1.0, foreground_scale, depth);
+        effect_uv = (UV - 0.5 - travel * foreground_shift - vec2(subject_offset_x, subject_offset_y))
+            / (subject_scale * lift) + 0.5;
+    }
+    float inside = step(0.0, effect_uv.x) * step(effect_uv.x, 1.0)
+        * step(0.0, effect_uv.y) * step(effect_uv.y, 1.0);
+    vec4 source = texture(TEXTURE, effect_uv);
+    float allowed = texture(permission_mask_texture, effect_uv).r * source.a * inside;
+    if (use_layered_uv) {
+        vec4 coverage = texture(layer_coverage_texture, effect_uv);
+        allowed *= layer_coverage_use_alpha ? coverage.a : coverage.r;
+    }
     float transform_guard = smoothstep(0.0, 0.05, presentation_scale);
     float t = TIME * motion_scale;
     // A bounded drifting light never snaps from one edge to the other.

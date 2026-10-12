@@ -113,6 +113,9 @@ internal static class LayeredCardRenderer
     internal static bool HasActiveLayer(NCard cardNode)
         => PortraitResolver.All(cardNode).Any(portrait => Find(portrait) is not null);
 
+    internal static ShaderMaterial? ActiveMaterial(TextureRect portrait)
+        => Find(portrait)?.Material as ShaderMaterial;
+
     internal static void Clear(NCard cardNode)
     {
         foreach (TextureRect portrait in PortraitResolver.All(cardNode)) Remove(Find(portrait));
@@ -280,6 +283,15 @@ internal static class LayeredCardRenderer
     // the given images and converts private copies.
     private static void ValidateImages(Image background, Image foreground, Image? mask, LayerSpec spec)
     {
+        // GPU variants retain their compressed upload buffer. Validation reads
+        // decompressed private copies, with the same alpha/coverage gates.
+        if (background.IsCompressed() || foreground.IsCompressed())
+        {
+            using Image plainBackground = BaseLevelRgba8(background);
+            using Image plainForeground = BaseLevelRgba8(foreground);
+            ValidateImages(plainBackground, plainForeground, mask, spec);
+            return;
+        }
         if (spec.UseMask && mask is null)
             throw new InvalidDataException("A required foreground mask could not be decoded.");
         var backgroundSize = new LayerCanvas(background.GetWidth(), background.GetHeight());
@@ -314,6 +326,8 @@ internal static class LayeredCardRenderer
     {
         var copy = new Image();
         copy.CopyFrom(source);
+        if (copy.IsCompressed() && copy.Decompress() != Error.Ok)
+            throw new InvalidDataException("Compressed layer could not be decoded for validation.");
         copy.ClearMipmaps();
         copy.Convert(Image.Format.Rgba8);
         return copy;

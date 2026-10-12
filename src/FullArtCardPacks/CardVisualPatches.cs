@@ -34,6 +34,7 @@ internal static class PortraitPatch
     [HarmonyPatch(typeof(NCard), "_EnterTree")]
     private static void EnterTreePostfix(NCard __instance)
     {
+        CardReports.Initialize();
         TryReplacePortrait(__instance, new EffectContext(EffectPresentation.Unknown));
     }
 
@@ -120,6 +121,23 @@ internal static class CardRenderRaritySpoofPatch
     private static bool _treatMappedBasicCardsAsCommonInLibrary;
 
     internal static bool IsSpoofingForCardReload => _spoofForCardReload;
+
+    internal static CardRarity ReadRealRarity(CardModel model)
+    {
+        bool reloading = _spoofForCardReload;
+        bool filtering = _treatMappedBasicCardsAsCommonInLibrary;
+        try
+        {
+            _spoofForCardReload = false;
+            _treatMappedBasicCardsAsCommonInLibrary = false;
+            return model.Rarity;
+        }
+        finally
+        {
+            _spoofForCardReload = reloading;
+            _treatMappedBasicCardsAsCommonInLibrary = filtering;
+        }
+    }
 
     [HarmonyPostfix]
     private static void Postfix(CardModel __instance, ref CardRarity __result)

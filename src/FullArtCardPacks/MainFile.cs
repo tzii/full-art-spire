@@ -42,6 +42,7 @@ public static class MainFile
         }
 
         FullArtPackRegistry.Load();
+        CardReports.Initialize();
 
         GD.Print($"[{ModId}] BaseLib effect settings: enabled={FullArtModConfig.EnableEffects}, intensity={FullArtModConfig.EffectIntensity}, rareFirst={FullArtModConfig.RareFirstEffects}, gridMotion={FullArtModConfig.GridMotion}, focusedMotion={FullArtModConfig.FocusedMotion}");
         

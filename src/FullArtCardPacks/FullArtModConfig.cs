@@ -9,6 +9,12 @@ public class FullArtModConfig : SimpleModConfig
     // Decode card art off the main thread; the native portrait shows until it is ready.
     public static bool BackgroundTextureLoading { get; set; } = true;
 
+    // Use verified DDS variants when available; original PNGs remain the fallback.
+    public static bool GpuCompressedTextures { get; set; } = true;
+
+    // F8 records the hovered card and current visual settings for local QA.
+    public static bool EnableCardReports { get; set; } = true;
+
     [ConfigSlider(0, 1, 0.05, Format = "{0:F2}")]
     public static float LayerDepth { get; set; } = 1f;
 
@@ -21,6 +27,9 @@ public class FullArtModConfig : SimpleModConfig
     public static float SubjectPop { get; set; } = 0.5f;
 
     public static bool EnableEffects { get; set; } = false;
+
+    // Experimental, low-strength finishes on the reviewed depth subject.
+    public static bool LayerSubjectFinishes { get; set; } = true;
 
     [ConfigSlider(0, 1, 0.05, Format = "{0:F2}")]
     public static float EffectIntensity { get; set; } = 0.2f;

@@ -24,6 +24,7 @@ internal static class FullArtPackRegistry
         LayeredCardRenderer.InvalidateResources();
         EffectRenderer.InvalidateResources();
         ModDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "";
+        GpuTextureVariants.Load();
         CardsByRuntimeModel.Clear();
         ReplacementCache.Clear();
         Config = LoadConfig();

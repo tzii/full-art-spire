@@ -56,6 +56,8 @@ internal sealed record FullArtCardEntry
 
 internal sealed record FullArtLayerMetadata
 {
+    [JsonPropertyName("finish_mask")]
+    public string FinishMask { get; init; } = "";
     [JsonPropertyName("background")]
     public string Background { get; init; } = "";
     [JsonPropertyName("foreground")]

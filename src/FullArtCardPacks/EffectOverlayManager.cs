@@ -1,4 +1,5 @@
 using Godot;
+using MegaCrit.Sts2.Core.Entities.UI;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 
 namespace FullArtCardPacks;
@@ -13,7 +14,8 @@ internal static class EffectOverlayManager
 
     internal static void ApplyOrUpdate(NCard cardNode, EffectContext context)
     {
-        if (cardNode.Model is not { } model
+        if (cardNode.Visibility != ModelVisibility.Visible
+            || cardNode.Model is not { } model
             || !FullArtPackRegistry.TryGetCard(model.GetType().FullName, out FullArtCardEntry? entry)
             || entry is null)
         {
@@ -31,15 +33,6 @@ internal static class EffectOverlayManager
             cardNode.AddToGroup(TrackedCardGroup);
         }
         cardNode.SetMeta(PresentationMetadata, (int)context.Presentation);
-
-        // Static foil masks do not follow the separated planes. Preserve the
-        // authored layered treatment while it is active, and restore foil on
-        // disabling it or when layer resources fail closed.
-        if (LayeredCardRenderer.HasActiveLayer(cardNode))
-        {
-            Clear(cardNode);
-            return;
-        }
 
         EffectDecision decision = EffectPolicy.Decide(model, entry);
         TextureRect? portrait = PortraitResolver.Resolve(cardNode);
@@ -99,11 +92,13 @@ internal static class EffectOverlayManager
         overlay.ExpandMode = portrait.ExpandMode;
         overlay.StretchMode = portrait.StretchMode;
         overlay.Material = material;
+        SyncLayerCoordinates(overlay, portrait);
         overlay.Visible = portrait.Visible;
     }
 
     internal static void RefreshTrackedCards()
     {
+        TextureCache.SettingsChanged();
         if (Engine.GetMainLoop() is not SceneTree tree)
         {
             return;
@@ -114,7 +109,7 @@ internal static class EffectOverlayManager
             {
                 continue;
             }
-            CardEffectPatch.ApplyOrUpdate(cardNode, StoredContext(cardNode));
+            PortraitPatch.Refresh(cardNode);
         }
     }
 
@@ -165,9 +160,26 @@ internal static class EffectOverlayManager
             {
                 // Modulate is inherited; copying it here would dim twice.
                 overlay.SelfModulate = portrait.SelfModulate;
+                SyncLayerCoordinates(overlay, portrait);
                 UpdateLightTilt(overlay, portrait);
             }
         }
+    }
+
+    private static void SyncLayerCoordinates(TextureRect overlay, TextureRect portrait)
+    {
+        if (overlay.Material is not ShaderMaterial material) return;
+        ShaderMaterial? layer = LayeredCardRenderer.ActiveMaterial(portrait);
+        material.SetShaderParameter("use_layered_uv", layer is not null);
+        if (layer is null) return;
+        material.SetShaderParameter("layer_coverage_texture", layer.GetShaderParameter("foreground_mask_texture"));
+        material.SetShaderParameter("layer_coverage_use_alpha",
+            !layer.GetShaderParameter("use_foreground_mask").AsBool()
+            || layer.GetShaderParameter("foreground_mask_use_alpha").AsBool());
+        // The effect samples the same eased subject UV as the depth shader.
+        foreach (string name in new[] { "view_pointer", "depth", "foreground_shift", "foreground_scale",
+            "subject_scale", "subject_offset_x", "subject_offset_y" })
+            material.SetShaderParameter(name, layer.GetShaderParameter(name));
     }
 
     private static void UpdateLightTilt(TextureRect overlay, TextureRect portrait)
