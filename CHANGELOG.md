@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.3.0 - first public release
+## 0.3.1 - first public release
+
+- Fix: finishes on Compendium grid cards no longer draw over the enlarged card when you inspect one.
+
+## 0.3.0 - release candidate (not published)
 
 - All 577 cards across 11 pools have full art with layered parallax depth.
 - New default rarity showcase: satin on starters, commons, tokens and statuses; pearl holo on uncommons; gold foil with glints, backdrop sparkle and an aura on rares; full prismatic with a rainbow aura on Ancients; themed finishes for event, quest and curse cards.

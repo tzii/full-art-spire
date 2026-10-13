@@ -76,6 +76,11 @@ internal static class EffectOverlayManager
         }
 
         TextureRect overlay = FindOverlay(portrait) ?? CreateOverlay(portrait);
+        // The depth layer can be recreated after the finish; keep the finish on top of it.
+        if (overlay.GetIndex() != portrait.GetChildCount() - 1)
+        {
+            portrait.MoveChild(overlay, -1);
+        }
         ClearInactivePortraits(cardNode, portrait);
         ShaderMaterial? material = EffectRenderer.CreateOrUpdateEffectMaterial(
             overlay.Material as ShaderMaterial,
@@ -134,7 +139,9 @@ internal static class EffectOverlayManager
             Name = OverlayName,
             MouseFilter = Control.MouseFilterEnum.Ignore,
             ShowBehindParent = false,
-            ZIndex = 1,
+            // A raised z_index escapes the card's draw order, so grid finishes
+            // would paint over popups such as the Compendium inspect view.
+            ZIndex = 0,
             SelfModulate = portrait.SelfModulate,
         };
         portrait.AddChild(overlay);
