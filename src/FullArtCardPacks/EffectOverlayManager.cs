@@ -178,7 +178,7 @@ internal static class EffectOverlayManager
             || layer.GetShaderParameter("foreground_mask_use_alpha").AsBool());
         // The effect samples the same eased subject UV as the depth shader.
         foreach (string name in new[] { "view_pointer", "depth", "foreground_shift", "foreground_scale",
-            "subject_scale", "subject_offset_x", "subject_offset_y" })
+            "subject_scale", "subject_offset_x", "subject_offset_y", "background_shift" })
             material.SetShaderParameter(name, layer.GetShaderParameter(name));
     }
 

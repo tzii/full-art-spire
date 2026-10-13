@@ -2,7 +2,8 @@ using System.Text;
 
 namespace FullArtCardPacks;
 
-public enum FinishAssignment { PackDefault, ByRarity, StableRandom, SingleFinish, ExperimentalMix }
+// Saved settings store names; new values are appended. RarityShowcase is the default.
+public enum FinishAssignment { PackDefault, ByRarity, StableRandom, SingleFinish, ExperimentalMix, RarityShowcase }
 
 // Values match shader IDs; existing pack IDs must remain stable.
 public enum TrialFinish
@@ -21,6 +22,7 @@ internal static class EffectFinishSelector
         if (authored == EffectSurface.None || !Enum.IsDefined(authored)) return EffectSurface.None;
         return assignment switch
         {
+            FinishAssignment.RarityShowcase => RarityShowcase.For(rarity).Surface,
             FinishAssignment.SingleFinish => Enum.IsDefined(single) ? (EffectSurface)single : authored,
             FinishAssignment.ByRarity => rarity switch
             {

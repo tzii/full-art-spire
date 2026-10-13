@@ -18,6 +18,14 @@ uniform float subject_offset_x = 0.0;
 uniform float subject_offset_y = 0.0;
 uniform sampler2D layer_coverage_texture : filter_linear_mipmap, repeat_disable;
 uniform bool layer_coverage_use_alpha = false;
+uniform float background_shift = 0.0;
+// Rarity showcase extras. All default to zero, which leaves the finishes unchanged.
+uniform float sparkle_strength : hint_range(0.0, 1.0) = 0.0;
+uniform float backdrop_strength : hint_range(0.0, 1.0) = 0.0;
+uniform float aura_strength : hint_range(0.0, 1.0) = 0.0;
+uniform float aura_spectral : hint_range(0.0, 1.0) = 0.0;
+uniform vec3 tier_color = vec3(1.0);
+uniform float alpha_cap : hint_range(0.0, 1.0) = 0.32;
 
 varying float presentation_scale;
 varying vec4 card_modulate;
@@ -48,6 +56,22 @@ vec3 film_color(float thickness_nm, float cosine_angle) {
     return 0.5 + 0.5 * cos(6.2831853 * (2.0 * 1.45 * thickness_nm * cosine_angle) / wavelength_nm);
 }
 
+// Sparse star glints fixed to the print. x is brightness, y the cell seed.
+// Each glint flashes when the view angle or slow time crosses its own phase.
+vec2 glints(vec2 uv, vec2 cells, float density, float angle, float t, float salt) {
+    vec2 grid = uv * cells;
+    vec2 cell = floor(grid);
+    float seed = hash21(cell + salt);
+    vec2 local = fract(grid) - vec2(0.2 + 0.6 * hash21(cell + salt + 3.1), 0.2 + 0.6 * hash21(cell + salt + 7.7));
+    // Keep each star at least about a pixel wide so it never aliases.
+    float pixel = max(max(fwidth(grid.x), fwidth(grid.y)), 0.015);
+    float core = exp(-dot(local, local) / (pixel * pixel * 2.5 + 0.0006));
+    float rays = exp(-abs(local.x) / (pixel * 1.3)) * exp(-abs(local.y) * 7.0)
+        + exp(-abs(local.y) / (pixel * 1.3)) * exp(-abs(local.x) * 7.0);
+    float flash = pow(max(0.0, sin(seed * 18.849556 + angle * 4.0 + t * (0.7 + seed))), 10.0);
+    return vec2((core + rays * 0.35) * flash * step(1.0 - density, seed), seed);
+}
+
 float filtered_line(float coordinate, float width) {
     float edge = max(fwidth(coordinate), 0.002);
     float distance = abs(fract(coordinate + 0.5) - 0.5);
@@ -66,9 +90,11 @@ void fragment() {
         * step(0.0, effect_uv.y) * step(effect_uv.y, 1.0);
     vec4 source = texture(TEXTURE, effect_uv);
     float allowed = texture(permission_mask_texture, effect_uv).r * source.a * inside;
+    float subject = 0.0;
     if (use_layered_uv) {
         vec4 coverage = texture(layer_coverage_texture, effect_uv);
-        allowed *= layer_coverage_use_alpha ? coverage.a : coverage.r;
+        subject = (layer_coverage_use_alpha ? coverage.a : coverage.r) * inside;
+        allowed *= subject;
     }
     float transform_guard = smoothstep(0.0, 0.05, presentation_scale);
     float t = TIME * motion_scale;
@@ -211,8 +237,49 @@ void fragment() {
         effect_alpha = 0.025 + broad * 0.1 + (trace * 0.85 + junction * 1.5) * charge;
     }
 
-    float alpha = clamp(effect_alpha * allowed * intensity * transform_guard, 0.0, 0.32);
+    float alpha = clamp(effect_alpha * allowed * intensity * transform_guard, 0.0, alpha_cap);
+    // Additive light, premultiplied so the showcase layers can stack.
+    vec3 light = effect_color * alpha;
+    float reveal = intensity * transform_guard;
+
+    if (sparkle_strength > 0.0) {
+        // Fine stars when the card is large, a few coarse ones when it is small.
+        // Rarer tiers carry more stars as well as brighter ones.
+        vec2 fine = glints(effect_uv, vec2(30.0, 45.0), 0.2 + 0.45 * sparkle_strength, angle, t, 0.0);
+        vec2 coarse = glints(effect_uv, vec2(11.0, 16.5), 0.25 + 0.35 * sparkle_strength, angle * 0.8, t * 0.8, 31.0);
+        vec3 fine_color = mix(vec3(1.0, 0.97, 0.9), spectrum(fine.y + angle * 0.3), 0.45);
+        vec3 coarse_color = mix(tier_color, spectrum(coarse.y + angle * 0.3), 0.35);
+        light += (fine_color * fine.x * detail + coarse_color * coarse.x * mix(0.9, 0.5, detail))
+            * allowed * sparkle_strength * reveal * 1.4;
+    }
+
+    if (use_layered_uv && backdrop_strength > 0.0) {
+        // Dust and a slow sheen live on the rear plate, so they share its parallax.
+        float plate_zoom = 1.0 + 2.1 * background_shift * depth;
+        vec2 travel = clamp(view_pointer, vec2(-1.0), vec2(1.0)) * clamp(depth, 0.0, 1.0);
+        vec2 plate_uv = (UV - 0.5) / plate_zoom + 0.5 + travel * background_shift;
+        vec2 dust = glints(plate_uv, vec2(20.0, 30.0), 0.15 + 0.35 * backdrop_strength, angle * 0.6, t * 0.7, 57.0);
+        float open = 1.0 - subject;
+        float sheen = soft_band(diagonal, center, 0.16) * 0.22;
+        vec3 dust_color = mix(tier_color, spectrum(dust.y + angle * 0.2), 0.5);
+        light += (tier_color * sheen + dust_color * dust.x * mix(0.55, 1.0, detail))
+            * open * backdrop_strength * reveal;
+    }
+
+    if (use_layered_uv && aura_strength > 0.0) {
+        // Blurred coverage from the mask's mipmaps outlines the subject cheaply.
+        vec4 near_cover = textureLod(layer_coverage_texture, effect_uv, 3.5);
+        vec4 far_cover = textureLod(layer_coverage_texture, effect_uv, 5.0);
+        float near_halo = layer_coverage_use_alpha ? near_cover.a : near_cover.r;
+        float far_halo = layer_coverage_use_alpha ? far_cover.a : far_cover.r;
+        float halo = clamp(max(near_halo, far_halo * 0.8) * inside - subject, 0.0, 1.0);
+        float pulse = 0.8 + 0.2 * sin(t * 1.6 + phase);
+        vec3 aura_color = mix(tier_color, spectrum(diagonal * 0.8 + angle * 0.3 + t * 0.05 + phase), aura_spectral);
+        light += aura_color * halo * pulse * aura_strength * reveal * 0.5;
+    }
+
+    light = min(light, vec3(0.9));
     // Keep headroom on bright art; remain effect-only and respect UI fades.
     float headroom = 1.0 - smoothstep(0.65, 1.0, max(source.r, max(source.g, source.b))) * 0.65;
-    COLOR = vec4(effect_color * card_modulate.rgb, alpha * card_modulate.a * headroom);
+    COLOR = vec4(light * card_modulate.rgb, card_modulate.a * headroom);
 }

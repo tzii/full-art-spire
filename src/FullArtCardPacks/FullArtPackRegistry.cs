@@ -59,7 +59,7 @@ internal static class FullArtPackRegistry
             && !entry.PreserveOriginalLayout
             && !string.IsNullOrWhiteSpace(entry.Art)
             && TryResolveModPath(entry.Art, out string artPath)
-            && File.Exists(artPath));
+            && (File.Exists(artPath) || GpuTextureVariants.Has(artPath)));
     }
 
     internal static bool TryGetCard(string? runtimeModel, out FullArtCardEntry? entry)

@@ -68,6 +68,14 @@ internal static class EffectRenderer
             material.SetShaderParameter("intensity", decision.Intensity * context.IntensityScale);
             material.SetShaderParameter("phase", decision.Phase);
             material.SetShaderParameter("motion_scale", FullArtModConfig.ReducedMotion ? 0f : motionScale);
+            // Pooled materials always receive every tier value; non-showcase modes zero the extras.
+            ShowcaseTier tier = decision.Showcase ?? default;
+            material.SetShaderParameter("sparkle_strength", tier.Sparkle);
+            material.SetShaderParameter("backdrop_strength", tier.Backdrop);
+            material.SetShaderParameter("aura_strength", tier.Aura);
+            material.SetShaderParameter("aura_spectral", tier.AuraSpectral);
+            material.SetShaderParameter("tier_color", new Color(tier.Red, tier.Green, tier.Blue));
+            material.SetShaderParameter("alpha_cap", decision.Showcase is null ? RarityShowcase.DefaultAlphaCap : tier.AlphaCap);
             // Pooled portraits start neutral. The tree callback supplies live local tilt.
             material.SetShaderParameter("view_tilt", Vector2.Zero);
             return material;

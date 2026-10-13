@@ -8,7 +8,8 @@ internal readonly record struct EffectDecision(
     EffectSurface Surface,
     float Intensity,
     float Phase,
-    string PermissionMask);
+    string PermissionMask,
+    ShowcaseTier? Showcase = null);
 
 internal static class EffectPolicy
 {
@@ -36,7 +37,10 @@ internal static class EffectPolicy
         // Cached Compendium reloads still need their finish. Read the true rarity
         // without allowing the temporary Ancient frame spoof into finish policy.
         CardRarity rarity = CardRenderRaritySpoofPatch.ReadRealRarity(model);
-        if (string.Equals(effects.RarityPolicy, "rare_first", StringComparison.OrdinalIgnoreCase)
+        bool showcase = FullArtModConfig.FinishAssignment == FinishAssignment.RarityShowcase;
+        // The showcase gives every rarity its own tier, so rare-first gating is moot.
+        if (!showcase
+            && string.Equals(effects.RarityPolicy, "rare_first", StringComparison.OrdinalIgnoreCase)
             && FullArtModConfig.RareFirstEffects
             && rarity != CardRarity.Rare)
         {
@@ -49,10 +53,12 @@ internal static class EffectPolicy
             return Disabled;
         }
 
-        float intensity = EffectSettings.EffectiveIntensity(depthFinish ? 0.12f : effects.Intensity, FullArtModConfig.EffectIntensity);
+        ShowcaseTier? tier = showcase ? RarityShowcase.For(rarity.ToString()) : null;
+        float perCard = tier?.Strength ?? (depthFinish ? 0.12f : effects.Intensity);
+        float intensity = EffectSettings.EffectiveIntensity(perCard, FullArtModConfig.EffectIntensity);
         surface = EffectFinishSelector.Select(surface, FullArtModConfig.FinishAssignment,
             FullArtModConfig.SingleFinish, rarity.ToString(), entry.RuntimeModel, FullArtModConfig.FinishSeed);
         float phase = EffectSettings.PhaseFor(entry.RuntimeModel, effects.PhaseSeed);
-        return new(intensity > 0f, surface, intensity, phase, permissionMask);
+        return new(intensity > 0f, surface, intensity, phase, permissionMask, tier);
     }
 }

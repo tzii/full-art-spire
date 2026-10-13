@@ -174,11 +174,13 @@ internal static class TextureCache
 
     private static (Image? Image, string? Error) DecodeOne(string path, bool mipmaps = true)
     {
-        if (!File.Exists(path)) return (null, $"Missing texture file: {path}");
         Image? image = null;
         try
         {
-            image = GpuTextureVariants.TryLoad(path) ?? Image.LoadFromFile(path);
+            // Release packages may carry only the compressed variant of a PNG path.
+            image = GpuTextureVariants.TryLoad(path);
+            if (image is null && !File.Exists(path)) return (null, $"Missing texture file: {path}");
+            image ??= Image.LoadFromFile(path);
             if (image is null || image.IsEmpty())
                 throw new InvalidDataException("Texture could not be decoded.");
             if (mipmaps) AddMipmaps(image);

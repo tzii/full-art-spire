@@ -53,11 +53,33 @@ try
             FinishAssignment.SingleFinish, finish, "Rare", "card", 0), "new finishes cannot bypass permission");
     }
     Equal(EffectSurface.None, EffectSurfaceParser.Parse("DiffractiveFoil"), "experiments stay opt-in runtime overrides");
-    Near(0.25f, new EffectContext(EffectPresentation.Grid).IntensityScale, 0.0001f, "grid intensity is independent");
-    Near(0.5f, new EffectContext(EffectPresentation.Hand).IntensityScale, 0.0001f, "hand intensity is independent");
+    Near(0.5f, new EffectContext(EffectPresentation.Grid).IntensityScale, 0.0001f, "grid intensity is independent");
+    Near(0.65f, new EffectContext(EffectPresentation.Hand).IntensityScale, 0.0001f, "hand intensity is independent");
     Near(0.75f, new EffectContext(EffectPresentation.Reward).IntensityScale, 0.0001f, "reward intensity is independent");
     Near(1f, new EffectContext(EffectPresentation.Focused).IntensityScale, 0.0001f, "focus intensity is independent");
-    Near(0.25f, new EffectContext(EffectPresentation.Unknown).IntensityScale, 0.0001f, "unknown context stays conservative");
+    Near(0.5f, new EffectContext(EffectPresentation.Unknown).IntensityScale, 0.0001f, "unknown context uses the grid strength");
+    Equal(FinishAssignment.RarityShowcase, FullArtModConfig.FinishAssignment, "rarity showcase is the default look");
+    Equal(true, FullArtModConfig.EnableEffects, "effects are on by default");
+    Equal(EffectSurface.Shimmer, EffectFinishSelector.Select(EffectSurface.Foil, FinishAssignment.RarityShowcase, TrialFinish.Foil, "Common", "card", 0), "showcase commons get satin");
+    Equal(EffectSurface.Holo, EffectFinishSelector.Select(EffectSurface.Foil, FinishAssignment.RarityShowcase, TrialFinish.Foil, "Uncommon", "card", 0), "showcase uncommons get pearl holo");
+    Equal(EffectSurface.Foil, EffectFinishSelector.Select(EffectSurface.Holo, FinishAssignment.RarityShowcase, TrialFinish.Holo, "Rare", "card", 0), "showcase rares get gold foil");
+    Equal(EffectSurface.Prismatic, EffectFinishSelector.Select(EffectSurface.Foil, FinishAssignment.RarityShowcase, TrialFinish.Foil, "Ancient", "card", 0), "showcase ancients get prismatic");
+    Equal(EffectSurface.None, EffectFinishSelector.Select(EffectSurface.None, FinishAssignment.RarityShowcase, TrialFinish.Foil, "Ancient", "card", 0), "showcase cannot enable art without a finish mask");
+    string[] ladder = { "Basic", "Common", "Uncommon", "Rare", "Ancient" };
+    for (int step = 1; step < ladder.Length; step++)
+    {
+        ShowcaseTier lower = RarityShowcase.For(ladder[step - 1]), higher = RarityShowcase.For(ladder[step]);
+        if (higher.Strength < lower.Strength || higher.Sparkle < lower.Sparkle || higher.Backdrop < lower.Backdrop
+            || higher.Aura < lower.Aura || higher.AlphaCap < lower.AlphaCap)
+            throw new InvalidOperationException($"{ladder[step]} must not look quieter than {ladder[step - 1]}");
+    }
+    foreach (string rarity in new[] { "None", "Basic", "Common", "Uncommon", "Rare", "Ancient", "Event", "Token", "Status", "Curse", "Quest", "Unknown" })
+    {
+        ShowcaseTier tier = RarityShowcase.For(rarity);
+        if (tier.Surface == EffectSurface.None || tier.Strength is <= 0f or > 1f || tier.AlphaCap is <= 0f or > 0.5f)
+            throw new InvalidOperationException($"{rarity} showcase tier is out of range");
+    }
+    Equal(0f, RarityShowcase.For("Common").Sparkle + RarityShowcase.For("Common").Backdrop + RarityShowcase.For("Common").Aura, "commons stay simple");
     Equal(EffectSurface.None, EffectSurfaceParser.Parse("Ember"), "experimental finishes do not expand pack approval contract");
     Equal(EffectSurface.Foil, EffectFinishSelector.Select(EffectSurface.Foil, (FinishAssignment)999, (TrialFinish)999, "Rare", "card", 0), "invalid settings preserve authored finish");
     Equal(EffectSurface.None, EffectSurfaceParser.Parse("unknown"), "unknown surfaces fail closed");
