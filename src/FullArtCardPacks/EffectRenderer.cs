@@ -67,6 +67,10 @@ internal static class EffectRenderer
             material.SetShaderParameter("surface_type", EffectSurfaceParser.ShaderId(decision.Surface));
             material.SetShaderParameter("intensity", decision.Intensity * context.IntensityScale);
             material.SetShaderParameter("phase", decision.Phase);
+            // Rare showcase glints need readable movement at grid size.
+            // Explicit zero motion and ReducedMotion still keep them still.
+            if (decision.Showcase is { Sparkle: >= 0.75f } && motionScale > 0f)
+                motionScale = MathF.Max(motionScale, 0.22f);
             material.SetShaderParameter("motion_scale", FullArtModConfig.ReducedMotion ? 0f : motionScale);
             // Pooled materials always receive every tier value; non-showcase modes zero the extras.
             ShowcaseTier tier = decision.Showcase ?? default;

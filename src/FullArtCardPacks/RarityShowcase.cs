@@ -22,8 +22,8 @@ internal static class RarityShowcase
     private static readonly ShowcaseTier Starter = new(EffectSurface.Shimmer, 0.40f, 0f, 0f, 0f, 0f, 0.80f, 0.86f, 0.95f, 0.24f);
     private static readonly ShowcaseTier Common = new(EffectSurface.Shimmer, 0.55f, 0f, 0f, 0f, 0f, 0.80f, 0.86f, 0.95f, 0.26f);
     private static readonly ShowcaseTier Uncommon = new(EffectSurface.Holo, 0.75f, 0.18f, 0f, 0f, 0f, 0.70f, 0.92f, 1.00f, 0.30f);
-    private static readonly ShowcaseTier Rare = new(EffectSurface.Foil, 0.95f, 0.75f, 0.50f, 0.45f, 0.15f, 1.00f, 0.80f, 0.42f, 0.38f);
-    private static readonly ShowcaseTier Ancient = new(EffectSurface.Prismatic, 1.00f, 1.00f, 0.80f, 0.75f, 1.00f, 1.00f, 0.90f, 0.70f, 0.44f);
+    private static readonly ShowcaseTier Rare = new(EffectSurface.Foil, 1.00f, 0.90f, 0.65f, 0.60f, 0.15f, 1.00f, 0.80f, 0.42f, 0.46f);
+    private static readonly ShowcaseTier Ancient = new(EffectSurface.Prismatic, 1.00f, 1.00f, 0.85f, 0.80f, 1.00f, 1.00f, 0.90f, 0.70f, 0.50f);
     private static readonly ShowcaseTier Event = new(EffectSurface.Pearlescent, 0.70f, 0.20f, 0.15f, 0f, 0f, 0.60f, 1.00f, 0.80f, 0.30f);
     private static readonly ShowcaseTier Quest = new(EffectSurface.Aurora, 0.75f, 0.30f, 0.20f, 0.25f, 0f, 1.00f, 0.75f, 0.40f, 0.32f);
     private static readonly ShowcaseTier Token = new(EffectSurface.Shimmer, 0.40f, 0f, 0f, 0f, 0f, 0.85f, 0.90f, 1.00f, 0.24f);

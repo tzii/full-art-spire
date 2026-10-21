@@ -65,6 +65,35 @@ internal static class GpuTextureVariants
     /// <summary>True when a compressed variant stands in for this source path.</summary>
     internal static bool Has(string source) => _bindings.ContainsKey(source);
 
+    // Layer verdicts survive texture eviction. Identify both possible inputs:
+    // DDS-only packages have no source PNG, while packages retaining the PNG
+    // may decode either copy depending on settings, support and hash checks.
+    internal static string? FileValidationKey(string source)
+    {
+        var original = new FileInfo(source);
+        var builder = new System.Text.StringBuilder();
+        builder.Append(source).Append('|');
+        if (original.Exists)
+            builder.Append(original.Length).Append('|').Append(original.LastWriteTimeUtc.Ticks);
+        builder.Append('|');
+        bool available = original.Exists;
+        if (_bindings.TryGetValue(source, out var binding))
+        {
+            var variant = new FileInfo(binding.Path);
+            builder.Append(binding.Path).Append('|').Append(binding.Sha256).Append('|')
+                .Append(binding.SourceSha256).Append('|').Append(binding.Width).Append('|')
+                .Append(binding.Height).Append('|').Append(binding.Format).Append('|');
+            if (variant.Exists)
+            {
+                available = true;
+                builder.Append(variant.Length).Append('|').Append(variant.LastWriteTimeUtc.Ticks);
+            }
+        }
+        // This is only a file-set identity. TryLoad still checks DDS integrity,
+        // dimensions and format; layer admission still checks the image pixels.
+        return available ? builder.ToString() : null;
+    }
+
     internal static Image? TryLoad(string source)
     {
         if (!_bindings.TryGetValue(source, out var binding)) return null;

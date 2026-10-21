@@ -11,6 +11,10 @@ internal static class EffectOverlayManager
     private const string OverlayGroup = "full_art_card_packs_effect_overlays";
     private static ulong _dimmingTreeId;
     private static readonly StringName PresentationMetadata = "full_art_card_packs_effect_presentation";
+    private static readonly StringName HandBaseMetadata = "full_art_card_packs_hand_base_intensity";
+    private static readonly StringName HandFocusMetadata = "full_art_card_packs_hand_focus";
+    // Seconds^-1 for easing a hand card's finish toward its hover strength.
+    private const float HandFocusResponse = 10f;
 
     internal static void ApplyOrUpdate(NCard cardNode, EffectContext context)
     {
@@ -97,6 +101,17 @@ internal static class EffectOverlayManager
         overlay.ExpandMode = portrait.ExpandMode;
         overlay.StretchMode = portrait.StretchMode;
         overlay.Material = material;
+        if (context.Presentation == EffectPresentation.Hand)
+        {
+            bool tracked = overlay.HasMeta(HandFocusMetadata);
+            overlay.SetMeta(HandBaseMetadata, decision.Intensity);
+            UpdateHandFocus(overlay, cardNode, snap: !tracked);
+        }
+        else
+        {
+            overlay.RemoveMeta(HandBaseMetadata);
+            overlay.RemoveMeta(HandFocusMetadata);
+        }
         SyncLayerCoordinates(overlay, portrait);
         overlay.Visible = portrait.Visible;
     }
@@ -117,6 +132,8 @@ internal static class EffectOverlayManager
             PortraitPatch.Refresh(cardNode);
         }
     }
+
+    internal static void Forget(NCard cardNode) => cardNode.RemoveMeta(PresentationMetadata);
 
     internal static EffectContext StoredContext(NCard cardNode)
     {
@@ -169,8 +186,33 @@ internal static class EffectOverlayManager
                 overlay.SelfModulate = portrait.SelfModulate;
                 SyncLayerCoordinates(overlay, portrait);
                 UpdateLightTilt(overlay, portrait);
+                if (overlay.HasMeta(HandBaseMetadata) && OwningCard(portrait) is { } card)
+                    UpdateHandFocus(overlay, card, snap: false);
             }
         }
+    }
+
+    private static NCard? OwningCard(Node node)
+    {
+        for (Node? ancestor = node.GetParent(); ancestor is not null; ancestor = ancestor.GetParent())
+        {
+            if (ancestor is NCard card) return card;
+        }
+        return null;
+    }
+
+    // Hovered, dragged, drawn and played cards ease up to the inspect strength.
+    private static void UpdateHandFocus(TextureRect overlay, NCard cardNode, bool snap)
+    {
+        if (overlay.Material is not ShaderMaterial material) return;
+        float target = EffectContext.HandFocusTarget(cardNode);
+        float focus = overlay.HasMeta(HandFocusMetadata) ? overlay.GetMeta(HandFocusMetadata).AsSingle() : target;
+        float blend = snap || FullArtModConfig.ReducedMotion
+            ? 1f : 1f - MathF.Exp(-HandFocusResponse * (float)overlay.GetProcessDeltaTime());
+        focus += (target - focus) * blend;
+        overlay.SetMeta(HandFocusMetadata, focus);
+        float baseIntensity = overlay.GetMeta(HandBaseMetadata).AsSingle();
+        material.SetShaderParameter("intensity", baseIntensity * EffectContext.HandIntensityAt(focus));
     }
 
     private static void SyncLayerCoordinates(TextureRect overlay, TextureRect portrait)

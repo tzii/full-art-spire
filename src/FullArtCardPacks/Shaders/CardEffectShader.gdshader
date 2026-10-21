@@ -69,6 +69,8 @@ vec2 glints(vec2 uv, vec2 cells, float density, float angle, float t, float salt
     float rays = exp(-abs(local.x) / (pixel * 1.3)) * exp(-abs(local.y) * 7.0)
         + exp(-abs(local.y) / (pixel * 1.3)) * exp(-abs(local.x) * 7.0);
     float flash = pow(max(0.0, sin(seed * 18.849556 + angle * 4.0 + t * (0.7 + seed))), 10.0);
+    // The large showcase stars use salt 83 and keep a visible resting core.
+    if (salt == 83.0) flash = 0.25 + 0.75 * flash;
     return vec2((core + rays * 0.35) * flash * step(1.0 - density, seed), seed);
 }
 
@@ -110,6 +112,9 @@ void fragment() {
     float detail = 1.0 - smoothstep(0.002, 0.008, footprint);
     float grain = 0.5 + 0.5 * sin(UV.y * 700.0 + sin(UV.x * 41.0));
     float stock = mix(1.0, 0.88 + 0.12 * grain, detail);
+    // Showcase rares/Ancients carry a steadier finish; other modes and the
+    // quiet starter/common/uncommon tiers retain their original material.
+    float rare_presence = smoothstep(0.65, 0.9, sparkle_strength);
     vec3 effect_color = vec3(0.0);
     float effect_alpha = 0.0;
 
@@ -118,7 +123,8 @@ void fragment() {
         effect_alpha = (0.035 + broad * 0.48 + catch_light * 0.14) * stock;
     } else if (surface_type == 2) {
         effect_color = mix(vec3(0.82, 0.55, 0.23), vec3(1.0, 0.91, 0.66), catch_light);
-        effect_alpha = (0.04 + broad * 0.46 + catch_light * 0.36) * stock;
+        effect_alpha = (0.04 + rare_presence * 0.11 + broad * (0.46 + rare_presence * 0.14)
+            + catch_light * 0.36) * stock;
     } else if (surface_type == 3) {
         float hue = diagonal * 0.34 + 0.12 * sin(t * 0.4 + phase);
         effect_color = mix(vec3(0.82, 0.86, 0.91), spectrum(hue), 0.32);
@@ -126,7 +132,7 @@ void fragment() {
     } else if (surface_type == 4) {
         float hue = diagonal * 0.75 + 0.22 * sin(t * 0.5 + phase);
         effect_color = mix(vec3(0.83), spectrum(hue), 0.68);
-        effect_alpha = (0.025 + broad * 0.72 + catch_light * 0.22) * stock;
+        effect_alpha = (0.025 + rare_presence * 0.10 + broad * 0.72 + catch_light * 0.22) * stock;
     } else if (surface_type == 5) {
         float reflection = soft_band(UV.x + UV.y * 0.15, 0.55 + 0.35 * sin(t * 0.45 + phase), 0.12);
         effect_color = mix(vec3(0.48, 0.65, 0.79), vec3(0.93, 0.96, 1.0), reflection);
@@ -251,6 +257,12 @@ void fragment() {
         vec3 coarse_color = mix(tier_color, spectrum(coarse.y + angle * 0.3), 0.35);
         light += (fine_color * fine.x * detail + coarse_color * coarse.x * mix(0.9, 0.5, detail))
             * allowed * sparkle_strength * reveal * 1.4;
+        // A handful of larger, less intermittent glints remain legible in a
+        // phone hand/grid without needing pointer movement to catch a flash.
+        vec2 hero = glints(effect_uv, vec2(6.0, 9.0), 0.55, angle * 0.45, t * 0.75, 83.0);
+        float resting_flash = 0.32 + 0.68 * pow(max(0.0, sin(hero.y * 18.849556 + angle * 2.0 + t)), 2.0);
+        light += mix(tier_color, vec3(1.0), 0.65) * hero.x * resting_flash
+            * allowed * rare_presence * reveal * 2.2;
     }
 
     if (use_layered_uv && backdrop_strength > 0.0) {
@@ -260,7 +272,7 @@ void fragment() {
         vec2 plate_uv = (UV - 0.5) / plate_zoom + 0.5 + travel * background_shift;
         vec2 dust = glints(plate_uv, vec2(20.0, 30.0), 0.15 + 0.35 * backdrop_strength, angle * 0.6, t * 0.7, 57.0);
         float open = 1.0 - subject;
-        float sheen = soft_band(diagonal, center, 0.16) * 0.22;
+        float sheen = soft_band(diagonal, center, 0.16 + rare_presence * 0.08) * (0.22 + rare_presence * 0.12);
         vec3 dust_color = mix(tier_color, spectrum(dust.y + angle * 0.2), 0.5);
         light += (tier_color * sheen + dust_color * dust.x * mix(0.55, 1.0, detail))
             * open * backdrop_strength * reveal;
@@ -276,10 +288,15 @@ void fragment() {
         float pulse = 0.8 + 0.2 * sin(t * 1.6 + phase);
         vec3 aura_color = mix(tier_color, spectrum(diagonal * 0.8 + angle * 0.3 + t * 0.05 + phase), aura_spectral);
         light += aura_color * halo * pulse * aura_strength * reveal * 0.5;
+        // A thin steady rim makes the rare subject read before a sparkle
+        // crosses it; coverage is sampled from the existing depth mask.
+        float inner_rim = clamp(subject - min(near_halo, far_halo), 0.0, 1.0);
+        light += aura_color * inner_rim * rare_presence * aura_strength * reveal * 0.45;
     }
 
     light = min(light, vec3(0.9));
     // Keep headroom on bright art; remain effect-only and respect UI fades.
-    float headroom = 1.0 - smoothstep(0.65, 1.0, max(source.r, max(source.g, source.b))) * 0.65;
+    float headroom = 1.0 - smoothstep(0.65, 1.0, max(source.r, max(source.g, source.b)))
+        * mix(0.65, 0.40, rare_presence);
     COLOR = vec4(light * card_modulate.rgb, card_modulate.a * headroom);
 }

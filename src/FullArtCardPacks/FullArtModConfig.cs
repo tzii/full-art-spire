@@ -53,7 +53,7 @@ public class FullArtModConfig : SimpleModConfig
     public static float GridIntensity { get; set; } = 0.5f;
 
     [ConfigSlider(0, 1, 0.05, Format = "{0:F2}")]
-    public static float HandIntensity { get; set; } = 0.65f;
+    public static float HandIntensity { get; set; } = 0.8f;
 
     [ConfigSlider(0, 1, 0.05, Format = "{0:F2}")]
     public static float RewardIntensity { get; set; } = 0.75f;

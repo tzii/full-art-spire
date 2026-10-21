@@ -35,7 +35,7 @@ internal static class PortraitPatch
     private static void EnterTreePostfix(NCard __instance)
     {
         CardReports.Initialize();
-        TryReplacePortrait(__instance, new EffectContext(EffectPresentation.Unknown));
+        TryReplacePortrait(__instance, PlacedContext(__instance));
     }
 
     [HarmonyPostfix]
@@ -49,7 +49,7 @@ internal static class PortraitPatch
             && PortraitField?.GetValue(__instance) is TextureRect { Visible: true }
             && MissedLayout.Add(cardId!))
             GD.PushWarning($"[FullArtCardPacks] Full-art layout was not applied to {cardId}; it shows the standard frame.");
-        TryReplacePortrait(__instance, new EffectContext(EffectPresentation.Unknown));
+        TryReplacePortrait(__instance, PlacedContext(__instance));
     }
 
     [HarmonyPostfix]
@@ -57,8 +57,18 @@ internal static class PortraitPatch
     private static void FreedToPoolPostfix(NCard __instance)
     {
         PendingArtRefresh.Forget(__instance);
+        EffectOverlayManager.Forget(__instance);
         LayeredCardRenderer.Clear(__instance);
     }
+
+    // Drawn cards reload after UpdateVisuals has classified them for the hand;
+    // keep that rather than the scale-inferred grid look. Other screens retain
+    // their earlier reload behaviour.
+    private static EffectContext PlacedContext(NCard cardNode)
+        => EffectContext.FromTree(cardNode)?.Presentation == EffectPresentation.Hand
+            || EffectOverlayManager.StoredContext(cardNode).Presentation == EffectPresentation.Hand
+            ? new EffectContext(EffectPresentation.Hand)
+            : new EffectContext(EffectPresentation.Unknown);
 
     /// <summary>Reapplies art once background loading delivers it.</summary>
     internal static void Refresh(NCard cardNode)

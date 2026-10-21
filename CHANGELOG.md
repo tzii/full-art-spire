@@ -1,8 +1,26 @@
 # Changelog
 
+## 0.3.4 - complete layered release candidate
+
+- Compressed textures must preserve full opacity as well as meeting the existing RGB quality limits. Textures that fail keep their original PNG, preventing affected cards from falling back to flat art.
+- Package verification checks decoded opacity, and the native release check validates all 577 decoded layer sets against the renderer's admission rules.
+- Includes the 0.3.3 combat finish, 0.3.2 rare finish, and 0.3.1 loading and Compendium fixes in one complete package.
+
+## 0.3.3 - finishes in combat
+
+- Hand cards ease up to the full inspect-strength finish while hovered, dragged, drawn or played, then settle back to HandIntensity in the resting hand.
+- Drawn cards keep their hand finish after the game reloads them, instead of dropping to the faint grid strength.
+- HandIntensity now defaults to 0.8 (was 0.65); existing saved settings are kept.
+
+## 0.3.2 - stronger rare finishes
+
+- Rare gold foil has a steadier sheen, larger glints and a clearer subject rim at normal grid/hand sizes; Ancients retain the stronger prismatic tier.
+- Rare/Ancient showcase animation remains visible at grid size while respecting zero motion and Reduced Motion.
+
 ## 0.3.1 - first public release
 
 - Fix: finishes on Compendium grid cards no longer draw over the enlarged card when you inspect one.
+- Fix: DDS-only art and background layers now pass layer file validation, restoring depth/parallax with background texture loading enabled. Cached layer verdicts track both PNG and DDS files.
 
 ## 0.3.0 - release candidate (not published)
 

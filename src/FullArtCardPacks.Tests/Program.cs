@@ -54,7 +54,13 @@ try
     }
     Equal(EffectSurface.None, EffectSurfaceParser.Parse("DiffractiveFoil"), "experiments stay opt-in runtime overrides");
     Near(0.5f, new EffectContext(EffectPresentation.Grid).IntensityScale, 0.0001f, "grid intensity is independent");
-    Near(0.65f, new EffectContext(EffectPresentation.Hand).IntensityScale, 0.0001f, "hand intensity is independent");
+    Near(0.8f, new EffectContext(EffectPresentation.Hand).IntensityScale, 0.0001f, "hand intensity is independent");
+    FullArtModConfig.HandIntensity = 0.5f;
+    FullArtModConfig.FocusedIntensity = 1f;
+    Near(0.5f, EffectContext.HandIntensityAt(0f), 0.0001f, "resting hand cards use the hand strength");
+    Near(0.75f, EffectContext.HandIntensityAt(0.5f), 0.0001f, "hovered hand cards ease toward focus");
+    Near(1f, EffectContext.HandIntensityAt(1f), 0.0001f, "hovered, dragged and played cards reach focus strength");
+    FullArtModConfig.HandIntensity = 0.8f;
     Near(0.75f, new EffectContext(EffectPresentation.Reward).IntensityScale, 0.0001f, "reward intensity is independent");
     Near(1f, new EffectContext(EffectPresentation.Focused).IntensityScale, 0.0001f, "focus intensity is independent");
     Near(0.5f, new EffectContext(EffectPresentation.Unknown).IntensityScale, 0.0001f, "unknown context uses the grid strength");

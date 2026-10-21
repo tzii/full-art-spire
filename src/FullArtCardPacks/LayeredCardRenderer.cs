@@ -342,9 +342,9 @@ internal static class LayeredCardRenderer
         foreach (string? path in new[] { background, foreground, mask })
         {
             if (path is null) { builder.Append("-|"); continue; }
-            var info = new FileInfo(path);
-            if (!info.Exists) return null;
-            builder.Append(path).Append('|').Append(info.Length).Append('|').Append(info.LastWriteTimeUtc.Ticks).Append('|');
+            string? textureKey = GpuTextureVariants.FileValidationKey(path);
+            if (textureKey is null) return null;
+            builder.Append(textureKey).Append('|');
         }
         return builder.Append(spec).ToString();
     }
