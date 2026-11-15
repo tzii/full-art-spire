@@ -14,6 +14,7 @@ static void Near(float expected, float actual, float tolerance, string message)
 
 try
 {
+    GameApiTests.Run();
     FullArtCardPacks.Tests.LruCacheTests.Run();
     FullArtCardPacks.Tests.BackgroundLoaderTests.Run();
     LayerPolicyTests.Run();
