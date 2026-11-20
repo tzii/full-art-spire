@@ -1,0 +1,20 @@
+# Build output
+src/**/bin/
+src/**/obj/
+*.user
+.vs/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Local scratch and packaging output
+tmp/
+dist/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
