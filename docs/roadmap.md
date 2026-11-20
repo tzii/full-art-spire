@@ -23,6 +23,9 @@
 - In-game exporter: dump every loaded card's `runtime_model`, character/pool,
   source mod and portrait PNG (extends `CardReports`).
 - `tools/` CLI: `init`, `validate`, `build` for v2 packs, plus a JSON schema.
+  The validator must understand `gpu-textures.audit`: the v1 validator reports
+  cards shipped only as DDS variants in the installed 0.3.4 release (e.g. three
+  colorless cards) as missing art, although the runtime accepts them.
 - Pack-author guide.
 - Pilot: one modded character, with its author's permission.
 
