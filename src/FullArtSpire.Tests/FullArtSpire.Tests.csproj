@@ -11,7 +11,7 @@
     <Reference Include="0Harmony"><HintPath>$(Sts2DataDir)\0Harmony.dll</HintPath><Private>true</Private></Reference>
     <Reference Include="GodotSharp"><HintPath>$(Sts2DataDir)\GodotSharp.dll</HintPath><Private>true</Private></Reference>
     <Reference Include="sts2"><HintPath>$(Sts2DataDir)\sts2.dll</HintPath><Private>true</Private></Reference>
-    <Reference Include="BaseLib"><HintPath>..\FullArtSpire\lib\BaseLib.dll</HintPath><Private>true</Private></Reference>
+    <PackageReference Include="Alchyr.Sts2.BaseLib" Version="3.3.0" />
     <!-- Newer game assemblies expose Sentry types through their API metadata. -->
     <Reference Include="Sentry.Godot" Condition="Exists('$(Sts2DataDir)/Sentry.Godot.dll')"><HintPath>$(Sts2DataDir)\Sentry.Godot.dll</HintPath><Private>true</Private></Reference>
     <Reference Include="Sentry" Condition="Exists('$(Sts2DataDir)/Sentry.dll')"><HintPath>$(Sts2DataDir)\Sentry.dll</HintPath><Private>true</Private></Reference>

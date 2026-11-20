@@ -22,10 +22,12 @@
       <HintPath>$(Sts2DataDir)\sts2.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <Reference Include="BaseLib">
-      <HintPath>lib\BaseLib.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Compile against the oldest BaseLib the manifest accepts. The game loads
+         the player's installed BaseLib, so nothing from the package ships. -->
+    <PackageReference Include="Alchyr.Sts2.BaseLib" Version="3.3.0" PrivateAssets="all" ExcludeAssets="runtime" />
   </ItemGroup>
 
   <ItemGroup>
