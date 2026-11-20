@@ -18,6 +18,8 @@ same path with different bytes are an error.
 With --optimize-png every 8-bit PNG outside v2 packs that holds only image data
 (no metadata or colour chunks) is re-encoded losslessly (Pillow, optimize=True)
 and kept only if it is smaller and decodes to identical pixels.
+--strip-content-credentials also re-encodes files whose only extra chunk is a
+C2PA Content Credentials manifest (caBX), which removes it; the audit row says so.
 png-reencode.audit records each rewritten file's new and original hash, so the
 art repository's recorded hashes stay checkable (validate_pack.py reads it);
 it is carried over when an optimized mod folder is packaged again.
@@ -39,6 +41,7 @@ import sys
 import zipfile
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
+from functools import partial
 from pathlib import Path, PurePosixPath
 
 REPO = Path(__file__).resolve().parents[1]
@@ -56,6 +59,8 @@ PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 # and a re-encode would drop metadata such as text, XMP or signed C2PA Content
 # Credentials (caBX), or invalidate the credentials' hash of the file.
 PLAIN_PNG_CHUNKS = frozenset({b"IHDR", b"IDAT", b"IEND"})
+# C2PA Content Credentials (a signed JUMBF manifest store). Removed only on request.
+CREDENTIAL_CHUNKS = frozenset({b"caBX"})
 V2_FORMAT = "full_art_pack"
 V2_VERSION = 2
 POOL_RE = re.compile(r"^[a-z0-9_]+$")
@@ -306,20 +311,24 @@ def png_header(data: bytes) -> tuple[int, int, int, int, frozenset[bytes]] | Non
     return None if header is None else (*header, frozenset(chunks))
 
 
-def reencode_png(path: str) -> tuple[str, int, int] | None:
+def reencode_png(path: str, removable: frozenset[bytes] = frozenset()) -> tuple[str, int, int, list[str]] | None:
     """Re-encodes one staged PNG losslessly if that makes it smaller.
 
-    Returns (original sha256, original size, new size), or None when the file
-    keeps its bytes. Only 8-bit grey, RGB and their alpha forms made of nothing
-    but PLAIN_PNG_CHUNKS qualify: Pillow reads 16-bit RGB as 8-bit, and other
-    chunks carry colour information or metadata a re-encode would lose.
+    Returns (original sha256, original size, new size, removed chunk types), or
+    None when the file keeps its bytes. Only 8-bit grey, RGB and their alpha
+    forms made of PLAIN_PNG_CHUNKS, plus any `removable` chunks, qualify:
+    Pillow reads 16-bit RGB as 8-bit, and other chunks carry colour information
+    or metadata a re-encode would lose.
     """
     from PIL import Image
 
     target = Path(path)
     data = target.read_bytes()
     header = png_header(data)
-    if header is None or header[2] != 8 or header[3] not in (0, 2, 4, 6) or not header[4] <= PLAIN_PNG_CHUNKS:
+    if header is None or header[2] != 8 or header[3] not in (0, 2, 4, 6):
+        return None
+    removed = header[4] - PLAIN_PNG_CHUNKS
+    if not removed <= removable:
         return None
     with Image.open(io.BytesIO(data)) as image:
         image.load()
@@ -338,10 +347,11 @@ def reencode_png(path: str) -> tuple[str, int, int] | None:
     temporary = target.with_name(target.name + ".tmp")
     temporary.write_bytes(encoded)
     os.replace(temporary, target)  # Replaces a hard link rather than writing through it.
-    return hashlib.sha256(data).hexdigest(), len(data), len(encoded)
+    return hashlib.sha256(data).hexdigest(), len(data), len(encoded), sorted(chunk.decode("ascii") for chunk in removed)
 
 
-def optimize_pngs(stage: Path, skip: set[str], carried: dict[str, dict]) -> tuple[dict[str, dict], int]:
+def optimize_pngs(stage: Path, skip: set[str], carried: dict[str, dict],
+                  removable: frozenset[bytes] = frozenset()) -> tuple[dict[str, dict], int]:
     """Re-encodes the stage's PNGs; returns the audit rows for every rewritten file and the bytes saved."""
     try:
         import PIL  # noqa: F401
@@ -351,25 +361,31 @@ def optimize_pngs(stage: Path, skip: set[str], carried: dict[str, dict]) -> tupl
     pngs = sorted(relative for relative in (path.relative_to(stage).as_posix() for path in stage.rglob("*.png"))
                   if relative not in skip and not relative.startswith("packs/"))
     paths = [str(stage / relative) for relative in pngs]
+    work = partial(reencode_png, removable=removable)
     if len(paths) < 8:
-        results = list(map(reencode_png, paths))
+        results = list(map(work, paths))
     else:
         with ProcessPoolExecutor(max_workers=min(os.cpu_count() or 1, 32)) as pool:
-            results = list(pool.map(reencode_png, paths, chunksize=4))
+            results = list(pool.map(work, paths, chunksize=4))
     rows, saved = dict(carried), 0
     for relative, result in zip(pngs, results):
         if result is None:
             continue
-        original, before, after = result
+        original, before, after, removed = result
         saved += before - after
         # A file optimized by an earlier package keeps the hash it had before any re-encode.
-        source = carried[relative]["source_sha256"] if relative in carried else original
-        rows[relative] = {"path": relative, "sha256": sha256(stage / relative), "source_sha256": source}
+        earlier = carried.get(relative, {})
+        row = {"path": relative, "sha256": sha256(stage / relative),
+               "source_sha256": earlier.get("source_sha256", original)}
+        removed = sorted(set(removed) | set(earlier.get("removed_chunks", [])))
+        if removed:
+            row["removed_chunks"] = removed
+        rows[relative] = row
     return rows, saved
 
 
 def assemble(sources: list[Path], dll: Path, version: str | None, output: Path, hardlink: bool,
-             optimize_png: bool = False) -> dict:
+             optimize_png: bool = False, strip_credentials: bool = False) -> dict:
     guard_output(output)
     check_dll(dll)
     chosen: dict[str, Pack] = {}
@@ -433,12 +449,14 @@ def assemble(sources: list[Path], dll: Path, version: str | None, output: Path, 
                if relative in files and sha256(stage / relative) == row["sha256"].lower()}
     saved = 0
     if optimize_png:
-        carried, saved = optimize_pngs(stage, set(rows), carried)
+        carried, saved = optimize_pngs(stage, set(rows), carried,
+                                       CREDENTIAL_CHUNKS if strip_credentials else frozenset())
     if carried:
         listing = ",\n".join("  " + json.dumps(carried[key]) for key in sorted(carried))
         (stage / REENCODE_AUDIT).write_text(
             '{"schema_version": 1,\n "description": "PNGs re-encoded losslessly by tools/package_mod.py: decoded '
-            'pixels are identical; source_sha256 is the hash before any re-encode.",\n "files": [\n'
+            'pixels are identical; source_sha256 is the hash before any re-encode; removed_chunks lists metadata '
+            'chunks the re-encode dropped (caBX: C2PA Content Credentials).",\n "files": [\n'
             + listing + "\n]}\n", encoding="utf-8", newline="\n")
     shutil.copyfile(dll, stage / f"{MOD_ID}.dll")
     (stage / "shaders").mkdir()
@@ -457,6 +475,7 @@ def assemble(sources: list[Path], dll: Path, version: str | None, output: Path, 
         "cards": sum(pack.cards for pack in chosen.values()),
         "gpu_variants": len(rows),
         "reencoded_pngs": len(carried),
+        "content_credentials_removed": sum("caBX" in row.get("removed_chunks", []) for row in carried.values()),
         "reencode_saved_bytes": saved,
         "file_count": len(shipped),
         "installed_bytes": sum(path.stat().st_size for path in shipped),
@@ -500,13 +519,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--hardlink", action="store_true", help="hard-link pack files instead of copying, where possible")
     parser.add_argument("--optimize-png", action="store_true",
                         help="re-encode shipped PNGs losslessly, keeping identical pixels (needs Pillow)")
+    parser.add_argument("--strip-content-credentials", action="store_true",
+                        help="with --optimize-png, also re-encode PNGs carrying C2PA Content Credentials, removing them")
     args = parser.parse_args(argv)
+    if args.strip_content_credentials and not args.optimize_png:
+        parser.error("--strip-content-credentials needs --optimize-png")
     try:
         if args.build:
             subprocess.run(["dotnet", "build", str(REPO / "src" / "FullArtSpire"), "-c", "Release", "-nologo", "-v", "q"], check=True)
         output = args.output.resolve()
         receipt = assemble(args.pack_source, args.dll.resolve(), args.version, output, args.hardlink,
-                           args.optimize_png)
+                           args.optimize_png, args.strip_content_credentials)
         if args.zip:
             archive = output / f"FullArtSpire-{receipt['version']}.zip"
             zip_folder(output / MOD_ID, archive)
@@ -519,7 +542,8 @@ def main(argv: list[str] | None = None) -> int:
           f"{receipt['gpu_variants']} GPU variants, {receipt['file_count']} files, "
           f"{receipt['installed_bytes'] / 1e9:.2f} GB -> {output / MOD_ID}")
     if args.optimize_png:
-        print(f"re-encoded PNGs: {receipt['reencoded_pngs']} in {REENCODE_AUDIT}, "
+        print(f"re-encoded PNGs: {receipt['reencoded_pngs']} in {REENCODE_AUDIT} "
+              f"({receipt['content_credentials_removed']} without their C2PA Content Credentials), "
               f"{receipt['reencode_saved_bytes'] / 1e6:.0f} MB saved this run")
     if receipt["runtime"]["dirty"]:
         print("warning: built from a working tree with uncommitted changes", file=sys.stderr)

@@ -1,6 +1,7 @@
 """Tests for tools/package_mod.py. Run: python -m unittest discover -s tools/tests"""
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import io
 import json
@@ -8,6 +9,7 @@ import sys
 import tempfile
 import unittest
 import zipfile
+import zlib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -234,6 +236,35 @@ class PackageTests(unittest.TestCase):
         audit = json.loads((self.root / "again" / "full_art_spire" / package_mod.REENCODE_AUDIT).read_text(encoding="utf-8"))
         self.assertEqual(sha(original), audit["files"][0]["source_sha256"], "packaging again keeps the original hash")
         self.assertEqual(1, again["reencoded_pngs"])
+
+    @unittest.skipIf(Image is None, "Pillow is not installed")
+    def test_content_credentials_are_removed_only_on_request(self) -> None:
+        buffer = io.BytesIO()
+        Image.linear_gradient("L").convert("RGB").save(buffer, "PNG", compress_level=0)
+        plain = buffer.getvalue()
+        body = b"jumb c2pa manifest store"
+        chunk = len(body).to_bytes(4, "big") + b"caBX" + body + zlib.crc32(b"caBX" + body).to_bytes(4, "big")
+        after_header = 8 + 12 + 13
+        credentialed = plain[:after_header] + chunk + plain[after_header:]
+        source = self.mod_source(art=credentialed)
+
+        package_mod.assemble([source], self.dll, None, self.output, False, True)
+        self.assertEqual(credentialed, (self.output / "full_art_spire" / "art" / "strike.png").read_bytes())
+
+        stripped_output = self.root / "stripped"
+        receipt = package_mod.assemble([source], self.dll, None, stripped_output, False, True, True)
+        shipped = (stripped_output / "full_art_spire" / "art" / "strike.png").read_bytes()
+        self.assertNotIn(b"caBX", package_mod.png_header(shipped)[4])
+        with Image.open(io.BytesIO(plain)) as before, Image.open(io.BytesIO(shipped)) as after:
+            self.assertEqual(before.tobytes(), after.tobytes())
+        audit = json.loads((stripped_output / "full_art_spire" / package_mod.REENCODE_AUDIT).read_text(encoding="utf-8"))
+        self.assertEqual(["caBX"], audit["files"][0]["removed_chunks"])
+        self.assertEqual(hashlib.sha256(credentialed).hexdigest(), audit["files"][0]["source_sha256"])
+        self.assertEqual(1, receipt["content_credentials_removed"])
+        with self.assertRaises(SystemExit):
+            with contextlib.redirect_stderr(io.StringIO()):
+                package_mod.main(["--pack-source", str(source), "--output", str(self.root / "x"),
+                                  "--strip-content-credentials"])
 
     def test_carried_reencode_rows_need_matching_bytes(self) -> None:
         source = self.mod_source()

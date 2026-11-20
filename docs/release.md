@@ -29,7 +29,7 @@ Optionally check real packs with the runtime's own discovery:
 ## 3. Package
 
 ```bash
-python tools/package_mod.py --build --zip --optimize-png \
+python tools/package_mod.py --build --zip --optimize-png --strip-content-credentials \
   --pack-source <art repo release folder> [--pack-source <more>] \
   --output dist/<version>
 ```
@@ -45,10 +45,15 @@ python tools/package_mod.py --build --zip --optimize-png \
 - `--optimize-png` (needs Pillow) re-encodes every 8-bit PNG outside v2 packs
   losslessly and keeps the result only when it is smaller and decodes to the
   same pixels. Only files made of bare image data qualify: 16-bit files and
-  files with colour chunks (gAMA, iCCP, sRGB, tRNS) or metadata keep their
-  bytes. That includes the OpenAI C2PA Content Credentials (`caBX`) on most
-  generated art and backgrounds, which a re-encode would strip or invalidate. `png-reencode.audit` maps each rewritten file to the
-  hash it had before, so the art repo's recorded hashes (effect audits,
+  files with colour chunks (gAMA, iCCP, sRGB, tRNS) or other metadata keep
+  their bytes.
+- `--strip-content-credentials` also re-encodes files whose only metadata is
+  a C2PA Content Credentials manifest (`caBX`), which removes it. Most
+  generated art and backgrounds carry OpenAI's; re-encoding them saves about a
+  fifth of their installed size (211 MB on the QA build, 49 MB of the zip). Decided 2026-11-20 by the maintainer, on the condition
+  that the README and the mod page say plainly that the art is AI-generated.
+- `png-reencode.audit` maps each rewritten file to the hash it had before (and
+  lists `removed_chunks`), so the art repo's recorded hashes (effect audits,
   `layer_audit`) still check out; the validator reads it, and packaging an
   optimized folder again carries it over. The art repo's own files are never
   touched, even with `--hardlink`.
@@ -85,4 +90,7 @@ QA.
 - Upload the zip to the Nexus page; the old Full Art Card Packs page links to
   it and tells players to delete the `full_art_card_packs` folder.
 - Credit Mega Crit and BaseLib, and describe preview quality honestly.
+- Say on the mod page that the full-art extensions and backgrounds are
+  AI-generated from the original card art, and that the release strips the
+  images' C2PA Content Credentials to save space.
 - Tag the commit `v<version>`.

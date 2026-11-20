@@ -50,7 +50,8 @@ To assemble the mod folder from the build and the art repository's packs, see
 [docs/release.md](docs/release.md):
 
 ```bash
-python tools/package_mod.py --build --zip --optimize-png --pack-source <art release folder> --output dist/<version>
+python tools/package_mod.py --build --zip --optimize-png --strip-content-credentials \
+  --pack-source <art release folder> --output dist/<version>
 ```
 
 The validator takes one of:
@@ -72,3 +73,9 @@ Building and packaging never install anything into the game folder.
 
 Original Slay the Spire 2 artwork, characters and designs © Mega Crit. This is
 an unofficial fan project. BaseLib by Alchyr.
+
+The full-art extensions and the depth-layer backgrounds are AI-generated (OpenAI
+image models), starting from Mega Crit's original card art. The released PNGs
+are re-encoded to save space, which removes the C2PA Content Credentials the
+generator embedded; `png-reencode.audit` in the mod folder lists every such
+file and the hash it had before.

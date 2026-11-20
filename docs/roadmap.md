@@ -57,12 +57,14 @@
 - Lossless PNG re-encoding. **Done (2026-11-20)** as `package_mod.py
   --optimize-png`, with `png-reencode.audit` keeping the art repo's recorded
   hashes checkable. On the QA build it rewrote the 259 PNGs that hold only
-  image data: 8.5 MB saved (zip 1,129 → 1,120 MB). **Open decision:** 708 art
-  and background PNGs (1.0 GB) carry OpenAI's signed C2PA Content Credentials
-  (`caBX`), which record that the image is AI-generated. Re-encoding them
-  would save about 20% (roughly 200 MB) but strips or invalidates the
-  credentials, so they keep their bytes unless the maintainer decides
-  otherwise.
+  image data: 8.5 MB saved (zip 1,129 → 1,120 MB). 708 art and background PNGs
+  (1.0 GB) carry OpenAI's signed C2PA Content Credentials (`caBX`), which
+  record that the image is AI-generated. **Decided 2026-11-20:** releases strip
+  them (`--strip-content-credentials`) and say on the README and mod page that
+  the art is AI-generated. Measured on the QA build: 971 PNGs re-encoded (712
+  of them losing credentials), installed size 1,689 → 1,478 MB, zip 1,120 →
+  1,072 MB; the zip gains less because its deflate pass already recovered part
+  of the slack. All 971 decode to the original pixels (checked independently).
 - Remove the runtime from the art repo once this repo is the source of truth
   (its native rendering tests move or point here).
 
