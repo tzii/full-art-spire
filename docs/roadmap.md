@@ -21,12 +21,13 @@
   seen in game:** check the Card packs section renders and saves with BaseLib
   3.4.x.
 - A packaging script that assembles the mod folder from this repo's build plus
-  pack folders produced by the art repo, and a release checklist. It must ship
-  the DLL as `full_art_spire.dll` (the build output is `FullArtSpire.dll`), the
-  shaders under `shaders/`. No pack cfg any more: every pack in `packs/`
-  loads unless switched off.
+  pack folders produced by the art repo, and a release checklist. **Done
+  (2026-11-20):** `tools/package_mod.py`, `docs/release.md`. From the
+  installed 0.3.4 packs it builds 12 packs, 667 cards, 545 GPU variants,
+  1.70 GB (1.15 GB zipped), leaving out 156 unreferenced Silent masks.
 - Python tooling tests on hosted CI (the DLL build stays local: it needs the
-  game's DLLs).
+  game's DLLs). **Done:** `.github/workflows/tools.yml`.
+- First in-game pass of 0.4.0 (`docs/release.md`, step 4).
 
 ## Phase 2 — pack authors and modded characters
 

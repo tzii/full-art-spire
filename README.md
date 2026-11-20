@@ -25,7 +25,9 @@ FullArtSpire.sln              solution for both projects
 src/FullArtSpire/             runtime mod (C#, Harmony, Godot shaders)
 src/FullArtSpire.Tests/       unit tests (custom runner; needs the game's DLLs)
 src/Sts2PathDiscovery.props   finds the Slay the Spire 2 install for builds
+tools/package_mod.py          assembles the mod folder and zip (stdlib Python)
 tools/validate_pack.py        v1 pack validator (stdlib Python)
+tools/tests/                  tests for the Python tools
 mod/                          mod manifest shipped next to the DLL
 docs/                         architecture, pack format, roadmap
 ```
@@ -40,13 +42,21 @@ override with `/p:Sts2Path=...` or `/p:Sts2DataDir=...`.
 ```bash
 dotnet build src/FullArtSpire -c Release
 dotnet run --project src/FullArtSpire.Tests
+python -m unittest discover -s tools/tests
 python tools/validate_pack.py --pack <mod>/packs/<pool>.pack
+```
+
+To assemble the mod folder from the build and the art repository's packs, see
+[docs/release.md](docs/release.md):
+
+```bash
+python tools/package_mod.py --build --zip --pack-source <art release folder> --output dist/<version>
 ```
 
 The validator checks art and mask files against the mod folder that contains
 `packs/`. Add `--root <art repo>` to also check each card's `repo_final_png`.
 
-Building never installs anything into the game folder.
+Building and packaging never install anything into the game folder.
 
 ## Credits
 

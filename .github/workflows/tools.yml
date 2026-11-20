@@ -1,0 +1,22 @@
+name: tools
+
+# The Python tools need no game files, unlike the DLL build and its tests.
+on:
+  push:
+    branches: [main]
+    paths: ["tools/**", "mod/**", "src/FullArtSpire/Shaders/**", "CHANGELOG.md", ".github/workflows/tools.yml"]
+  pull_request:
+    paths: ["tools/**", "mod/**", "src/FullArtSpire/Shaders/**", "CHANGELOG.md", ".github/workflows/tools.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m unittest discover -s tools/tests -v

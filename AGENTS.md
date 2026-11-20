@@ -27,6 +27,8 @@ gameplay, balance or card-data changes.
 ```bash
 dotnet build src/FullArtSpire -c Release
 dotnet run --project src/FullArtSpire.Tests
+python -m unittest discover -s tools/tests
+python tools/package_mod.py --build --pack-source <art release folder> --output dist/<name>
 python tools/validate_pack.py --pack <pack> --release-root <mod-folder>
 ```
 
@@ -37,3 +39,4 @@ The build needs an installed game (see `src/Sts2PathDiscovery.props`).
 - `docs/architecture.md` — how the runtime works
 - `docs/pack-format.md` — v1 (still read) and v2 (implemented)
 - `docs/roadmap.md` — phases and open decisions
+- `docs/release.md` — packaging and the release checklist
