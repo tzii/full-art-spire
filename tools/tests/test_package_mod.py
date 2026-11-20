@@ -180,9 +180,17 @@ class PackageTests(unittest.TestCase):
         package_mod.zip_folder(self.output / "full_art_spire", archive)
         with zipfile.ZipFile(archive) as bundle:
             names = bundle.namelist()
+            self.assertIsNone(bundle.testzip())
+            self.assertEqual(b"strike-png", bundle.read("full_art_spire/art/strike.png"))
         self.assertIn("full_art_spire/full_art_spire.dll", names)
         self.assertTrue(all(name.startswith("full_art_spire/") for name in names))
         self.assertEqual(sorted(names), names, "entries are in a stable order")
+
+    def test_zip_levels_by_file_type(self) -> None:
+        self.assertEqual(package_mod.PNG_ZIP_LEVEL, package_mod.zip_level("full_art_spire/art/x.PNG"))
+        self.assertEqual(package_mod.ZIP_LEVEL, package_mod.zip_level("full_art_spire/gpu/x.dds"))
+        info = package_mod.zip_entry("full_art_spire/art/x.png")
+        self.assertEqual(package_mod.PNG_ZIP_LEVEL, getattr(info, "compress_level", getattr(info, "_compresslevel", None)))
 
 
 if __name__ == "__main__":

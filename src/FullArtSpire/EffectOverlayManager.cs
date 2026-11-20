@@ -7,8 +7,8 @@ namespace FullArtSpire;
 internal static class EffectOverlayManager
 {
     private const string OverlayName = "_full_art_effect_overlay";
-    private const string TrackedCardGroup = "full_art_spire_seen_cards";
-    private const string OverlayGroup = "full_art_spire_effect_overlays";
+    private static readonly StringName TrackedCardGroup = "full_art_spire_seen_cards";
+    private static readonly StringName OverlayGroup = "full_art_spire_effect_overlays";
     private static ulong _dimmingTreeId;
     private static readonly StringName PresentationMetadata = "full_art_spire_effect_presentation";
     private static readonly StringName HandBaseMetadata = "full_art_spire_hand_base_intensity";
@@ -212,22 +212,21 @@ internal static class EffectOverlayManager
         focus += (target - focus) * blend;
         overlay.SetMeta(HandFocusMetadata, focus);
         float baseIntensity = overlay.GetMeta(HandBaseMetadata).AsSingle();
-        material.SetShaderParameter("intensity", baseIntensity * EffectContext.HandIntensityAt(focus));
+        material.SetShaderParameter(ShaderNames.Intensity, baseIntensity * EffectContext.HandIntensityAt(focus));
     }
 
     private static void SyncLayerCoordinates(TextureRect overlay, TextureRect portrait)
     {
         if (overlay.Material is not ShaderMaterial material) return;
         ShaderMaterial? layer = LayeredCardRenderer.ActiveMaterial(portrait);
-        material.SetShaderParameter("use_layered_uv", layer is not null);
+        material.SetShaderParameter(ShaderNames.UseLayeredUv, layer is not null);
         if (layer is null) return;
-        material.SetShaderParameter("layer_coverage_texture", layer.GetShaderParameter("foreground_mask_texture"));
-        material.SetShaderParameter("layer_coverage_use_alpha",
-            !layer.GetShaderParameter("use_foreground_mask").AsBool()
-            || layer.GetShaderParameter("foreground_mask_use_alpha").AsBool());
+        material.SetShaderParameter(ShaderNames.LayerCoverageTexture, layer.GetShaderParameter(ShaderNames.ForegroundMaskTexture));
+        material.SetShaderParameter(ShaderNames.LayerCoverageUseAlpha,
+            !layer.GetShaderParameter(ShaderNames.UseForegroundMask).AsBool()
+            || layer.GetShaderParameter(ShaderNames.ForegroundMaskUseAlpha).AsBool());
         // The effect samples the same eased subject UV as the depth shader.
-        foreach (string name in new[] { "view_pointer", "depth", "foreground_shift", "foreground_scale",
-            "subject_scale", "subject_offset_x", "subject_offset_y", "background_shift" })
+        foreach (StringName name in ShaderNames.SharedLayerUv)
             material.SetShaderParameter(name, layer.GetShaderParameter(name));
     }
 
@@ -247,10 +246,10 @@ internal static class EffectOverlayManager
                 position.Y / size.Y * 2f - 1f, false);
             target = new Vector2(pointer.X, pointer.Y);
         }
-        Vector2 previous = material.GetShaderParameter("view_tilt").AsVector2();
+        Vector2 previous = material.GetShaderParameter(ShaderNames.ViewTilt).AsVector2();
         float blend = FullArtModConfig.ReducedMotion || !FullArtModConfig.EffectFollowPointer
             ? 1f : 1f - MathF.Exp(-12f * (float)overlay.GetProcessDeltaTime());
-        material.SetShaderParameter("view_tilt", previous.Lerp(target, blend));
+        material.SetShaderParameter(ShaderNames.ViewTilt, previous.Lerp(target, blend));
     }
 
     private static TextureRect? FindOverlay(TextureRect portrait)

@@ -91,7 +91,8 @@ Folders without `pack.json` are noted and ignored.
 
 - Every pack is on unless the player switches it off. Each pack gets a switch
   under **Card packs** in the BaseLib settings; switched-off ids are stored in
-  the hidden `DisabledPacks` setting. Changes apply after a restart.
+  the hidden `DisabledPacks` setting. Changes apply right away, including to
+  cards on screen; adding or removing pack folders still needs a restart.
 - One id found twice: the copy that would win a conflict is used, the other is
   skipped with a log line.
 - One `runtime_model` claimed by several packs: highest `priority` wins, then
@@ -104,4 +105,21 @@ Folders without `pack.json` are noted and ignored.
   (needs a pilot with one modded character).
 - Pack-author permission: art derived from another mod's portraits needs that
   mod author's consent before distribution.
-- `tools/validate_pack.py` checks v1 only.
+
+### Validating
+
+`python tools/validate_pack.py --pack <pack folder>` reports what the runtime
+would do with a v2 pack: values of the wrong type (which make the whole pack
+unreadable), invalid ids and versions, unsafe or missing paths, letter-case
+mismatches, layers the runtime would ignore (ranges, mask channel,
+registration), unknown finishes, broken GPU variants, and files no card uses.
+`--mod-folder` checks every pack in a mod folder and reports which pack wins
+each card.
+
+[`pack.schema.json`](pack.schema.json) describes the shape of `pack.json` for
+editors: point a `"$schema"` field at a copy of it (the runtime ignores that
+field) for completion and inline errors. The schema cannot see files, GPU
+variants or rules that span fields (a canvas taller than wide, background and
+foreground being different files), so run the validator before shipping.
+`tools/tests/test_pack_schema.py` fails when the schema and the validator
+disagree.

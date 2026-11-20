@@ -29,6 +29,9 @@ internal static class GameApiTests
             "NCard.UpdateVisuals must expose previewMode for the Harmony postfix");
         foreach (string name in new[] { "_EnterTree", "Reload", "OnFreedToPool" })
             UniqueMethod(typeof(NCard), name);
+        // LiveCardRefresh invokes Reload() itself when pack switches change.
+        Require(UniqueMethod(typeof(NCard), "Reload").GetParameters().Length == 0,
+            "NCard.Reload must stay parameterless for live pack switching");
 
         Require(typeof(CardModel).GetProperty("Rarity", Instance)?.GetMethod is { ReturnType: var rarity }
             && rarity == typeof(CardRarity), "CardModel.Rarity must remain a CardRarity getter");

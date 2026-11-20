@@ -146,7 +146,7 @@ public class FullArtModConfig : SimpleModConfig
         }
 
         optionContainer.AddChild(CreateSectionHeader("Card packs"));
-        optionContainer.AddChild(CreateRawLabelControl("Switching a pack on or off takes effect after restarting the game.", 24));
+        optionContainer.AddChild(CreateRawLabelControl("Switching a pack on or off applies right away.", 24));
         for (int i = 0; i < packs.Length; i++)
         {
             if (i > 0)

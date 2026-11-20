@@ -7,7 +7,7 @@ namespace FullArtSpire;
 internal static class LayeredCardRenderer
 {
     private const string OverlayName = "_full_art_layered_card";
-    private const string OverlayGroup = "full_art_spire_layered_cards";
+    private static readonly StringName OverlayGroup = "full_art_spire_layered_cards";
     private static readonly StringName LayerKeyMeta = "full_art_spire_layer_key";
     // Validation caches no textures. New instances reuse a file-set verdict
     // when the paths, file sizes and write times are unchanged.
@@ -76,22 +76,22 @@ internal static class LayeredCardRenderer
             TextureRect overlay = Find(portrait) ?? Create(portrait);
             var material = overlay.Material as ShaderMaterial ?? new ShaderMaterial();
             material.Shader = shader;
-            material.SetShaderParameter("use_normalized_source_uv", textures.NormalizedSourceUv);
-            material.SetShaderParameter("background_texture", textures.Background);
-            material.SetShaderParameter("foreground_texture", textures.Foreground);
-            material.SetShaderParameter("foreground_mask_texture", textures.ForegroundMask ?? textures.Foreground);
-            material.SetShaderParameter("use_foreground_mask", textures.ForegroundMask is not null);
-            material.SetShaderParameter("foreground_mask_use_alpha", entry.Layers!.ForegroundMaskChannel == "alpha");
-            material.SetShaderParameter("depth", decision.Depth);
-            material.SetShaderParameter("background_shift", decision.BackgroundShift);
-            material.SetShaderParameter("foreground_shift", decision.ForegroundShift);
-            material.SetShaderParameter("foreground_scale", decision.ForegroundScale);
-            material.SetShaderParameter("subject_scale", decision.SubjectScale);
-            material.SetShaderParameter("subject_offset_x", decision.SubjectOffsetX);
-            material.SetShaderParameter("subject_offset_y", decision.SubjectOffsetY);
-            material.SetShaderParameter("shadow_strength", decision.ShadowStrength);
-            material.SetShaderParameter("frame_inset", decision.FrameInset);
-            material.SetShaderParameter("pop_strength", Math.Clamp(FullArtModConfig.SubjectPop, 0f, 1f));
+            material.SetShaderParameter(ShaderNames.UseNormalizedSourceUv, textures.NormalizedSourceUv);
+            material.SetShaderParameter(ShaderNames.BackgroundTexture, textures.Background);
+            material.SetShaderParameter(ShaderNames.ForegroundTexture, textures.Foreground);
+            material.SetShaderParameter(ShaderNames.ForegroundMaskTexture, textures.ForegroundMask ?? textures.Foreground);
+            material.SetShaderParameter(ShaderNames.UseForegroundMask, textures.ForegroundMask is not null);
+            material.SetShaderParameter(ShaderNames.ForegroundMaskUseAlpha, entry.Layers!.ForegroundMaskChannel == "alpha");
+            material.SetShaderParameter(ShaderNames.Depth, decision.Depth);
+            material.SetShaderParameter(ShaderNames.BackgroundShift, decision.BackgroundShift);
+            material.SetShaderParameter(ShaderNames.ForegroundShift, decision.ForegroundShift);
+            material.SetShaderParameter(ShaderNames.ForegroundScale, decision.ForegroundScale);
+            material.SetShaderParameter(ShaderNames.SubjectScale, decision.SubjectScale);
+            material.SetShaderParameter(ShaderNames.SubjectOffsetX, decision.SubjectOffsetX);
+            material.SetShaderParameter(ShaderNames.SubjectOffsetY, decision.SubjectOffsetY);
+            material.SetShaderParameter(ShaderNames.ShadowStrength, decision.ShadowStrength);
+            material.SetShaderParameter(ShaderNames.FrameInset, decision.FrameInset);
+            material.SetShaderParameter(ShaderNames.PopStrength, Math.Clamp(FullArtModConfig.SubjectPop, 0f, 1f));
             overlay.Material = material;
             overlay.SetMeta(LayerKeyMeta, layerKey);
             overlay.TextureFilter = CanvasItem.TextureFilterEnum.LinearWithMipmaps;
@@ -412,7 +412,7 @@ internal static class LayeredCardRenderer
         // are attached again; do not cache attachment or transformed positions.
         Vector2 pointer = Vector2.Zero;
         Vector2 size = portrait.Size;
-        float depth = material.GetShaderParameter("depth").AsSingle();
+        float depth = material.GetShaderParameter(ShaderNames.Depth).AsSingle();
         bool attached = portrait.IsInsideTree() && overlay.IsInsideTree();
         if (!FullArtModConfig.ReducedMotion && float.IsFinite(depth) && depth > 0f
             && float.IsFinite(size.X) && float.IsFinite(size.Y) && size.X > 0f && size.Y > 0f
@@ -425,13 +425,13 @@ internal static class LayeredCardRenderer
                 position.Y / size.Y * 2f - 1f, false);
             pointer = new Vector2(normalized.X, normalized.Y);
         }
-        material.SetShaderParameter("pointer", pointer);
+        material.SetShaderParameter(ShaderNames.Pointer, pointer);
         // Ease toward the target so layers glide in and settle back; detached,
         // pooled or reduced-motion cards snap so no stale pose survives.
-        Vector2 previous = material.GetShaderParameter("view_pointer").AsVector2();
+        Vector2 previous = material.GetShaderParameter(ShaderNames.ViewPointer).AsVector2();
         float blend = !attached || FullArtModConfig.ReducedMotion || !float.IsFinite(previous.X) || !float.IsFinite(previous.Y)
             ? 1f : 1f - MathF.Exp(-PointerResponse * (float)overlay.GetProcessDeltaTime());
-        material.SetShaderParameter("view_pointer", previous.Lerp(pointer, blend));
+        material.SetShaderParameter(ShaderNames.ViewPointer, previous.Lerp(pointer, blend));
     }
 
     private static TextureRect? Find(TextureRect portrait)

@@ -27,8 +27,8 @@ public static class MainFile
         {
             var modConfig = new FullArtModConfig();
             GD.Print($"[{ModId}] Created FullArtModConfig instance");
-            modConfig.ConfigChanged += (_, _) => EffectOverlayManager.RefreshTrackedCards();
-            modConfig.OnConfigReloaded += EffectOverlayManager.RefreshTrackedCards;
+            modConfig.ConfigChanged += (_, _) => OnSettingsChanged();
+            modConfig.OnConfigReloaded += OnSettingsChanged;
 
             ModConfigRegistry.Register(ModId, modConfig);
 
@@ -66,6 +66,23 @@ public static class MainFile
         var harmony = new Harmony(ModId);
         harmony.PatchAll();
         GD.Print($"[{ModId}] initialized.");
+    }
+
+    // A tickbox change, or Restore defaults. Pack switches apply at once: the
+    // card table is rebuilt and cards on screen reload; finishes then refresh.
+    private static void OnSettingsChanged()
+    {
+        try
+        {
+            if (FullArtPackRegistry.ApplySwitches())
+                GD.Print($"[{ModId}] Reloaded {LiveCardRefresh.ReloadStaleCards()} cards on screen.");
+        }
+        catch (Exception ex)
+        {
+            GD.PushWarning($"[{ModId}] Could not apply pack switches until restart: {ex.Message}");
+        }
+
+        EffectOverlayManager.RefreshTrackedCards();
     }
 
     // Both mods patch the same cards. While the old one is installed and enabled,

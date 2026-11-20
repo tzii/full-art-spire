@@ -16,6 +16,10 @@ internal static class PortraitPatch
     // Per-refresh logging flooded godot.log; report each card type once.
     private static readonly HashSet<string> Reported = new(StringComparer.Ordinal);
     private static readonly HashSet<string> MissedLayout = new(StringComparer.Ordinal);
+    // The native portrait's own layout, kept on the TextureRect while full art
+    // replaces it, so a card whose pack is switched off looks as the game made it.
+    private static readonly StringName NativeStretchMeta = "full_art_spire_native_stretch";
+    private static readonly StringName NativeFilterMeta = "full_art_spire_native_filter";
 
     static PortraitPatch()
     {
@@ -27,6 +31,7 @@ internal static class PortraitPatch
     [HarmonyPatch(typeof(NCard), "UpdateVisuals")]
     private static void UpdateVisualsPostfix(NCard __instance, PileType pileType, CardPreviewMode previewMode)
     {
+        LiveCardRefresh.ReloadIfStale(__instance);
         TryReplacePortrait(__instance, EffectContext.From(__instance, pileType, previewMode));
     }
 
@@ -35,6 +40,8 @@ internal static class PortraitPatch
     private static void EnterTreePostfix(NCard __instance)
     {
         CardReports.Initialize();
+        if (LiveCardRefresh.ReloadIfStale(__instance))
+            return; // Its Reload postfix has applied the current art.
         TryReplacePortrait(__instance, PlacedContext(__instance));
     }
 
@@ -44,6 +51,7 @@ internal static class PortraitPatch
     {
         // Reload also runs when locked/unknown visibility changes, without an
         // UpdateVisuals call. Refresh the child before the next frame is drawn.
+        LiveCardRefresh.MarkCurrent(__instance);
         string? cardId = __instance.Model?.GetType().FullName;
         if (FullArtPackRegistry.HasReplacement(cardId)
             && PortraitField?.GetValue(__instance) is TextureRect { Visible: true }
@@ -85,23 +93,50 @@ internal static class PortraitPatch
                 if (Reported.Add(cardId))
                     GD.Print($"[FullArtSpire] Replacing portrait for {cardId}");
                 if (PortraitField?.GetValue(cardNode) is TextureRect portrait)
-                {
-                    portrait.Texture = texture;
-                    portrait.StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered;
-                    portrait.TextureFilter = CanvasItem.TextureFilterEnum.LinearWithMipmaps;
-                }
+                    ShowFullArt(portrait, texture);
                 if (AncientPortraitField?.GetValue(cardNode) is TextureRect ancientPortrait)
                 {
-                    ancientPortrait.Texture = texture;
-                    ancientPortrait.StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered;
-                    ancientPortrait.TextureFilter = CanvasItem.TextureFilterEnum.LinearWithMipmaps;
+                    ShowFullArt(ancientPortrait, texture);
                     ancientPortrait.Visible = true;
                 }
+            }
+            else if (!HasFullArtEntry(cardId))
+            {
+                RestoreNativeLayout(cardNode);
             }
         }
 
         CardEffectPatch.ApplyOrUpdate(cardNode, context);
     }
+
+    private static void ShowFullArt(TextureRect portrait, Texture2D texture)
+    {
+        if (!portrait.HasMeta(NativeStretchMeta))
+        {
+            portrait.SetMeta(NativeStretchMeta, (int)portrait.StretchMode);
+            portrait.SetMeta(NativeFilterMeta, (int)portrait.TextureFilter);
+        }
+        portrait.Texture = texture;
+        portrait.StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered;
+        portrait.TextureFilter = CanvasItem.TextureFilterEnum.LinearWithMipmaps;
+    }
+
+    // A pooled node rebound to a card without art, or a card whose pack was
+    // switched off. Reload has already put the native texture back.
+    private static void RestoreNativeLayout(NCard cardNode)
+    {
+        foreach (TextureRect portrait in PortraitResolver.All(cardNode))
+        {
+            if (!portrait.HasMeta(NativeStretchMeta)) continue;
+            portrait.StretchMode = (TextureRect.StretchModeEnum)portrait.GetMeta(NativeStretchMeta).AsInt32();
+            portrait.TextureFilter = (CanvasItem.TextureFilterEnum)portrait.GetMeta(NativeFilterMeta).AsInt32();
+            portrait.RemoveMeta(NativeStretchMeta);
+            portrait.RemoveMeta(NativeFilterMeta);
+        }
+    }
+
+    private static bool HasFullArtEntry(string cardId)
+        => FullArtPackRegistry.TryGetCard(cardId, out FullArtCardEntry? entry) && entry is { PreserveOriginalLayout: false };
 
     // While the art loads in the background the native portrait stays.
     private static bool TryGetReplacementTexture(NCard cardNode, string cardId, out Texture2D? texture)

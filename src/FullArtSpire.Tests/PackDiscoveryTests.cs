@@ -113,11 +113,23 @@ internal static class PackDiscoveryTests
             },
         });
 
+        // Explicit JSON nulls in optional fields must not break discovery of other packs;
+        // an editor's "$schema" pointer is ignored.
+        temp.Write("mod/packs/nulls/pack.json", """
+            {"$schema": "../../docs/pack.schema.json", "format": "full_art_pack", "format_version": 2, "id": "a.nulls", "name": null, "version": null,
+             "authors": null, "credits": null, "requires": null, "min_game_version": null,
+             "cards": [{"runtime_model": "Mod.Cards.Nulls", "art": "art/n.png", "layers": null, "effects": null}]}
+            """);
+
         PackDiscoveryResult result = PackDiscovery.Discover(new PackDiscoveryInput(mod, null, Array.Empty<InstalledMod>(), null));
-        Require(result.Packs.Select(pack => pack.Id).SequenceEqual(new[] { "a.cards" }), "only the well-formed pack is found: "
+        Require(result.Packs.Select(pack => pack.Id).SequenceEqual(new[] { "a.cards", "a.nulls" }), "only the well-formed packs are found: "
             + string.Join(",", result.Packs.Select(pack => pack.Id)));
         Require(result.Packs[0].Cards.Select(card => card.RuntimeModel).SequenceEqual(new[] { ModdedCard }),
             "null, unnamed and escaping cards are dropped");
+        DiscoveredPack nulls = result.Packs[1];
+        Require(nulls.Name == "a.nulls" && nulls.Version == "" && nulls.Credits == "" && nulls.Cards.Count == 1,
+            "null optional fields read as empty");
+        Require(FullArtModConfig.PackLabel(nulls) == "a.nulls", "a pack without name or version is labelled by its id");
         Require(result.Warnings.Count == 10, $"each rejection is reported once; got {result.Warnings.Count}: {string.Join(" | ", result.Warnings)}");
     }
 
@@ -199,6 +211,9 @@ internal static class PackDiscoveryTests
 
         PackLoadPlan without = FullArtPackRegistry.Plan(mod, result.Packs, new HashSet<string> { "megacrit.fool", "megacrit.ironclad" });
         Require(without.Cards.Keys.SequenceEqual(new[] { ModdedCard }), "switched-off packs contribute no cards");
+        // Live switching keeps cached textures valid only if prefixes never move.
+        Require(without.Roots.SequenceEqual(all.Roots) && without.Cards[ModdedCard].Art == all.Cards[ModdedCard].Art,
+            "pack roots and path prefixes do not depend on the switches");
         Require(all.Cards.ContainsKey(Strike.ToUpperInvariant()), "runtime models stay case-insensitive");
     }
 

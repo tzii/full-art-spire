@@ -96,8 +96,24 @@ Pack switches: `FullArtModConfig` overrides `SetupConfigUI` to add a **Card
 packs** section after the generated options. Each switch is BaseLib's own
 `NConfigTickbox` bound to a `PackToggleProperty`, a synthetic bool
 `PropertyInfo` that reads and writes the hidden `DisabledPacks` setting
-(comma-separated ids). BaseLib saves it on change. The registry reads it at
-startup only, so changes apply after a restart.
+(comma-separated ids). BaseLib saves it on change.
+
+Switches apply while the game runs. On BaseLib's `ConfigChanged` (a tickbox)
+or `OnConfigReloaded` (Restore defaults), `FullArtPackRegistry.ApplySwitches`
+re-plans the card table from the packs found at startup, without reading disk,
+and bumps `Generation`. Pack roots are numbered from every usable pack, on or
+off, so path prefixes, cached textures, layer verdicts and GPU variants stay
+valid. `LiveCardRefresh` then calls the private `NCard.Reload()` on every card
+node in the scene tree shown under an older generation: Reload rebuilds the
+frame from the (spoofed) rarity and resets the native portrait, and the Reload
+postfix applies the new art, layers and finish. Nodes outside the tree catch up
+in their `_EnterTree` or `UpdateVisuals` postfix. When a card loses its art,
+the portrait's native stretch mode and filter (kept as metadata on the
+`TextureRect`) are restored.
+
+Per-frame work (layer pointer easing, finish tilt and dimming) passes cached
+`ShaderNames` rather than strings: each string argument would allocate a new
+`StringName` per call, per visible card, per frame.
 
 ## Diagnostics
 

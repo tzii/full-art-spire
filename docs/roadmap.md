@@ -10,16 +10,12 @@
 ## Phase 1 — 0.4.0: packs from anywhere
 
 - Rename to Full Art Spire (`full_art_spire`) with old-mod detection and
-  settings import (see Decided). **Done in code (2026-11-20), not yet tried in
-  a game session:** test with the old mod installed, disabled and removed, and
-  check that BaseLib's main-menu popup shows the warning.
+  settings import (see Decided). **Done (2026-11-20).**
 - Pack format v2 and discovery (`pack-format.md`), still reading v1 `.pack`.
-  **Done in code (2026-11-20).** Checked against the installed 0.3.4 packs
-  (12 v1 packs, 667 cards, all art resolved); not yet tried in a game session.
+  **Done (2026-11-20).** v2 discovery is covered by unit tests only; no v2
+  pack has been loaded in a game session yet.
 - Per-pack toggles in the BaseLib settings instead of the cfg allow-list,
-  seeded from the 0.3.x pack choices. **Done in code (2026-11-20), not yet
-  seen in game:** check the Card packs section renders and saves with BaseLib
-  3.4.x.
+  seeded from the 0.3.x pack choices. **Done (2026-11-20).**
 - A packaging script that assembles the mod folder from this repo's build plus
   pack folders produced by the art repo, and a release checklist. **Done
   (2026-11-20):** `tools/package_mod.py`, `docs/release.md`. From the
@@ -27,22 +23,43 @@
   1.70 GB (1.15 GB zipped), leaving out 156 unreferenced Silent masks.
 - Python tooling tests on hosted CI (the DLL build stays local: it needs the
   game's DLLs). **Done:** `.github/workflows/tools.yml`.
-- First in-game pass of 0.4.0 (`docs/release.md`, step 4).
+- First in-game pass of 0.4.0 (`docs/release.md`, step 4). **Done
+  (2026-11-20), by the maintainer on game v0.113.1 with BaseLib 3.4.8**, using
+  `0.4.0-qa2` (commit `9bd8175`) built from the installed 0.3.4 packs:
+  - with the old mod installed, the main-menu warning showed and the old mod
+    kept working; the pack selection was recorded;
+  - with it removed, settings were imported and all 12 packs (667 cards)
+    loaded with no errors in the log;
+  - Compendium and a run looked right;
+  - switching a character's pack off and on worked after a restart.
+  Not checked: Restore defaults switching every pack back on. BaseLib titles
+  the warning popup "Mod configuration error", which overstates it.
 
 ## Phase 2 — pack authors and modded characters
 
 - In-game exporter: dump every loaded card's `runtime_model`, character/pool,
   source mod and portrait PNG (extends `CardReports`).
 - `tools/` CLI: `init`, `validate`, `build` for v2 packs, plus a JSON schema.
-  The validator must understand v2 `pack.json` and `gpu-textures.audit`: the v1 validator reports
-  cards shipped only as DDS variants in the installed 0.3.4 release (e.g. three
-  colorless cards) as missing art, although the runtime accepts them.
+  **Validate done (2026-11-20):** `validate_pack.py` checks v2 folders, v1
+  packs and whole mod folders against the runtime's rules, including GPU-only
+  art (45 cards in the 0.3.4 packs). **Schema done (2026-11-20):**
+  `docs/pack.schema.json`, tested against the validator's rules. `init` and
+  `build` remain.
+- Apply pack switches without a restart. **Done in code (2026-11-20), not yet
+  tried in game:** the card table is re-planned from the packs found at
+  startup and cards on screen reload (`docs/architecture.md`, Settings).
 - Pack-author guide.
 - Pilot: one modded character, with its author's permission.
 
 ## Phase 3 — art repo cleanup
 
 - Art repo builders emit v2 pack folders; stop committing release copies.
+- Losslessly re-encode release PNGs in the art repo builder, before it records
+  `layer_audit.packaged_sha256` and the effect audit hashes. Measured on the
+  0.3.4 packs (2026-11-20): Pillow `optimize=True` saves 20% on `art/` and 24%
+  on layer backgrounds with identical pixels, about 230 MB of the 1.09 GB of
+  PNGs. It cannot happen in `package_mod.py`: it would make those recorded
+  hashes false. Keep 16-bit PNGs as they are (Pillow reads them as 8-bit).
 - Remove the runtime from the art repo once this repo is the source of truth
   (its native rendering tests move or point here).
 

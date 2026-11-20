@@ -46,6 +46,10 @@ PACK_ID_RE = re.compile(r"^[a-z0-9_]+(\.[a-z0-9_]+)+$")
 LAYER_PATHS = ("background", "foreground", "foreground_mask", "finish_mask")
 EFFECT_PATHS = ("mask", "effect_mask", "protection_mask", "permission_mask")
 ZIP_TIME = (2026, 1, 1, 0, 0, 0)
+# PNG data is already deflated: level 1 comes out both smaller (about 1.5 points)
+# and faster than 9. DDS and text compress best at 9 (BC data shrinks to ~29%).
+PNG_ZIP_LEVEL = 1
+ZIP_LEVEL = 9
 
 
 class PackageError(Exception):
@@ -327,15 +331,27 @@ def assemble(sources: list[Path], dll: Path, version: str | None, output: Path, 
     }
 
 
+def zip_level(name: str) -> int:
+    return PNG_ZIP_LEVEL if name.lower().endswith(".png") else ZIP_LEVEL
+
+
+def zip_entry(name: str) -> zipfile.ZipInfo:
+    info = zipfile.ZipInfo(name, date_time=ZIP_TIME)
+    info.compress_type = zipfile.ZIP_DEFLATED
+    info.external_attr = 0o644 << 16
+    # ZipFile.open(info, "w") ignores the archive's compresslevel; set it per entry.
+    if hasattr(info, "compress_level"):  # Python 3.13+
+        info.compress_level = zip_level(name)
+    else:
+        info._compresslevel = zip_level(name)
+    return info
+
+
 def zip_folder(stage: Path, archive: Path) -> None:
-    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as bundle:
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
         files = {item.relative_to(stage).as_posix(): item for item in stage.rglob("*") if item.is_file()}
         for relative in sorted(files):
-            path = files[relative]
-            info = zipfile.ZipInfo(f"{MOD_ID}/{relative}", date_time=ZIP_TIME)
-            info.compress_type = zipfile.ZIP_DEFLATED
-            info.external_attr = 0o644 << 16
-            with path.open("rb") as stream, bundle.open(info, "w") as target:
+            with files[relative].open("rb") as stream, bundle.open(zip_entry(f"{MOD_ID}/{relative}"), "w") as target:
                 shutil.copyfileobj(stream, target, 1 << 20)
 
 

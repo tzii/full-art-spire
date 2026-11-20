@@ -44,6 +44,12 @@ python tools/package_mod.py --build --zip \
   `FullArtSpire.dll`), shaders under `shaders/`. There is no pack cfg.
 - `dist/` is ignored by git. The script refuses to write into a game install.
 
+Then validate the result; warnings are worth reading, issues block the release:
+
+```bash
+python tools/validate_pack.py --mod-folder dist/<version>/full_art_spire
+```
+
 ## 4. Check in the game
 
 Done by a person on a real install. Only then may release notes claim in-game
@@ -55,8 +61,10 @@ QA.
    settings page.
 3. **Old mod removed:** settings carried over (compare a changed slider),
    packs switched off in the old cfg are off, and the log lists every pack.
-4. **Card packs section:** every pack has a switch; switching one off and
-   restarting removes its art; restore defaults switches all on.
+4. **Card packs section:** every pack has a switch. Switching one off removes
+   its art at once, including from cards already on screen (open a run's deck
+   view or the Compendium behind the settings); switching it on brings the art
+   back. Restore defaults switches all on. After a restart the choice holds.
 5. Compendium and a run: full art, depth, finishes and Reduced Motion on a
    sample of every pool.
 6. With a pack from another mod or the player folder (when one exists): it

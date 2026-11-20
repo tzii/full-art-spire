@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/tzii/full-art-spire/main/docs/pack.schema.json",
+  "title": "Full Art Spire pack (format v2)",
+  "description": "pack.json of a Full Art Spire pack folder. Shape only: tools/validate_pack.py --pack <folder> also checks files, GPU variants and the runtime's layer rules.",
+  "type": "object",
+  "required": ["format", "format_version", "id", "cards"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "format": { "const": "full_art_pack" },
+    "format_version": { "const": 2 },
+    "id": {
+      "description": "namespace.name: lowercase a-z, 0-9 and _, at least one dot. Base-game packs use megacrit.<pool>.",
+      "type": "string",
+      "pattern": "^[a-z0-9_]+(\\.[a-z0-9_]+)+$",
+      "maxLength": 128
+    },
+    "name": { "description": "Shown in the settings; the id is shown when empty.", "type": ["string", "null"] },
+    "version": { "type": ["string", "null"] },
+    "authors": { "type": ["array", "null"], "items": { "type": "string" } },
+    "credits": { "description": "Credit the original art and its artists.", "type": ["string", "null"] },
+    "requires": {
+      "description": "The pack loads only when every listed mod is installed (and at least min_version).",
+      "type": ["array", "null"],
+      "items": {
+        "type": ["object", "null"],
+        "required": ["mod"],
+        "properties": {
+          "mod": { "type": "string", "minLength": 1 },
+          "min_version": { "$ref": "#/$defs/version" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "min_game_version": { "$ref": "#/$defs/version" },
+    "priority": {
+      "description": "When packs claim the same card, the highest priority wins.",
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "cards": { "type": "array", "items": { "$ref": "#/$defs/card" } }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "version": {
+      "type": ["string", "null"],
+      "pattern": "^(v?\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?)?$"
+    },
+    "path": {
+      "description": "A .png path relative to the pack folder, '/'-separated, inside the pack: no empty, '.' or '..' segments, no name ending in a space or dot, no character Windows forbids.",
+      "type": "string",
+      "pattern": "^(?![\\s/])(?!.*(^|/)\\.{1,2}(/|$))(?!.*//)(?!.*[ .]/)[^\\x00-\\x1f:\\\\<>\"|?*]+\\.[pP][nN][gG]$"
+    },
+    "optionalPath": {
+      "anyOf": [{ "const": "" }, { "$ref": "#/$defs/path" }]
+    },
+    "card": {
+      "type": "object",
+      "required": ["runtime_model", "art"],
+      "properties": {
+        "runtime_model": {
+          "description": "The card model's full .NET type name, e.g. MegaCrit.Sts2.Core.Models.Cards.KiWhip.",
+          "type": "string",
+          "pattern": "^\\S+$"
+        },
+        "art": { "$ref": "#/$defs/path" },
+        "canonical_asset_name": { "type": "string" },
+        "display_name": { "type": "string" },
+        "pool": { "type": "string" },
+        "preserve_original_layout": {
+          "description": "true keeps the game's normal frame around the art.",
+          "type": "boolean"
+        },
+        "layers": { "$ref": "#/$defs/layers" },
+        "effects": { "$ref": "#/$defs/effects" }
+      }
+    },
+    "layers": {
+      "type": ["object", "null"],
+      "properties": {
+        "background": { "$ref": "#/$defs/path" },
+        "foreground": { "$ref": "#/$defs/path" },
+        "foreground_mask": { "$ref": "#/$defs/optionalPath" },
+        "foreground_mask_channel": { "enum": ["red", "alpha"] },
+        "finish_mask": { "$ref": "#/$defs/optionalPath" },
+        "registration": {
+          "type": "object",
+          "required": ["mode", "source_dimensions", "mask_dimensions", "background_dimensions"],
+          "properties": {
+            "mode": { "const": "normalized_source_uv" },
+            "source_dimensions": { "$ref": "#/$defs/canvas" },
+            "mask_dimensions": { "$ref": "#/$defs/canvas" },
+            "background_dimensions": { "$ref": "#/$defs/canvas" }
+          },
+          "additionalProperties": false
+        },
+        "depth": { "type": "number", "minimum": 0, "maximum": 1 },
+        "background_shift": { "type": "number", "minimum": 0, "maximum": 0.025 },
+        "foreground_shift": { "type": "number", "minimum": 0, "maximum": 0.04 },
+        "foreground_scale": { "type": "number", "minimum": 1, "maximum": 1.1 },
+        "subject_scale": { "type": "number", "minimum": 0.25, "maximum": 1.5 },
+        "subject_offset_x": { "type": "number", "minimum": -0.5, "maximum": 0.5 },
+        "subject_offset_y": { "type": "number", "minimum": -0.5, "maximum": 0.5 },
+        "shadow_strength": { "type": "number", "minimum": 0, "maximum": 0.5 },
+        "frame_inset": { "type": "number", "minimum": 0.025, "maximum": 0.1 }
+      }
+    },
+    "canvas": {
+      "description": "[width, height] of a portrait canvas: width 64-2730, height above width and at most 4096.",
+      "type": "array",
+      "prefixItems": [
+        { "type": "integer", "minimum": 64, "maximum": 2730 },
+        { "type": "integer", "minimum": 65, "maximum": 4096 }
+      ],
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "effects": {
+      "type": ["object", "null"],
+      "properties": {
+        "surface": {
+          "description": "The finish. The runtime ignores letter case and surrounding spaces; any other value shows no finish.",
+          "enum": ["none", "shimmer", "foil", "holo", "prismatic", "rainbow"]
+        },
+        "rarity_policy": { "type": "string" },
+        "mask": { "$ref": "#/$defs/optionalPath" },
+        "effect_mask": { "$ref": "#/$defs/optionalPath" },
+        "protection_mask": { "$ref": "#/$defs/optionalPath" },
+        "permission_mask": { "$ref": "#/$defs/optionalPath" },
+        "intensity": { "type": "number" },
+        "phase_seed": { "type": ["number", "null"] }
+      }
+    }
+  }
+}

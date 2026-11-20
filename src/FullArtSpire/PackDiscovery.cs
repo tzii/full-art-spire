@@ -87,19 +87,19 @@ internal static partial class PackDiscovery
 
         foreach (string file in SortedFiles(bundled, "*.pack"))
         {
-            Add(result, ReadLegacy(file, input.ModDirectory, result));
+            Add(result, Guarded(result, file, () => ReadLegacy(file, input.ModDirectory, result)));
         }
 
         foreach (string folder in SortedDirectories(bundled))
         {
-            Add(result, ReadPackFolder(folder, PackSource.Bundled, null, result));
+            Add(result, Guarded(result, folder, () => ReadPackFolder(folder, PackSource.Bundled, null, result)));
         }
 
         foreach (InstalledMod mod in input.OtherMods.OrderBy(mod => mod.Id, StringComparer.Ordinal))
         {
             foreach (string folder in SortedDirectories(Path.Combine(mod.Path, ModPackFolder)))
             {
-                Add(result, ReadPackFolder(folder, PackSource.Mod, mod.Id, result));
+                Add(result, Guarded(result, folder, () => ReadPackFolder(folder, PackSource.Mod, mod.Id, result)));
             }
         }
 
@@ -107,7 +107,7 @@ internal static partial class PackDiscovery
         {
             foreach (string folder in SortedDirectories(input.PlayerPacksDirectory))
             {
-                Add(result, ReadPackFolder(folder, PackSource.Player, null, result));
+                Add(result, Guarded(result, folder, () => ReadPackFolder(folder, PackSource.Player, null, result)));
             }
         }
 
@@ -134,6 +134,20 @@ internal static partial class PackDiscovery
         PackSource.Legacy => $"{pack.Id} (v1 {Path.GetFileName(pack.ManifestPath)})",
         _ => pack.Id,
     };
+
+    // One pack, however malformed, must never stop the others from loading.
+    private static DiscoveredPack? Guarded(PackDiscoveryResult result, string path, Func<DiscoveredPack?> read)
+    {
+        try
+        {
+            return read();
+        }
+        catch (Exception ex)
+        {
+            result.Warnings.Add($"Skipping {path}: {ex.GetType().Name}: {ex.Message}");
+            return null;
+        }
+    }
 
     private static void Add(PackDiscoveryResult result, DiscoveredPack? pack)
     {
@@ -213,14 +227,14 @@ internal static partial class PackDiscovery
         {
             Id = manifest.Id,
             Name = string.IsNullOrWhiteSpace(manifest.Name) ? manifest.Id : manifest.Name.Trim(),
-            Version = manifest.Version.Trim(),
+            Version = manifest.Version?.Trim() ?? "",
             Source = source,
             SourceModId = sourceModId,
             Root = Path.GetFullPath(folder),
             ManifestPath = file,
             Priority = manifest.Priority,
             Authors = manifest.Authors?.Where(author => !string.IsNullOrWhiteSpace(author)).ToArray() ?? Array.Empty<string>(),
-            Credits = manifest.Credits,
+            Credits = manifest.Credits ?? "",
             Requires = manifest.Requires?.Where(requirement => requirement is not null).Select(requirement => requirement!).ToArray()
                 ?? Array.Empty<PackRequirement>(),
             MinGameVersion = manifest.MinGameVersion,

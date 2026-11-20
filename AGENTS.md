@@ -29,7 +29,7 @@ dotnet build src/FullArtSpire -c Release
 dotnet run --project src/FullArtSpire.Tests
 python -m unittest discover -s tools/tests
 python tools/package_mod.py --build --pack-source <art release folder> --output dist/<name>
-python tools/validate_pack.py --pack <pack> --release-root <mod-folder>
+python tools/validate_pack.py --mod-folder <mod-folder>   # or --pack <v2 folder | v1 .pack>
 ```
 
 The build needs an installed game (see `src/Sts2PathDiscovery.props`).

@@ -24,6 +24,13 @@ internal static class FullArtPackRegistry
 
     internal static string ModDirectory { get; private set; } = "";
 
+    // Bumped whenever pack switches change the card table, so card nodes shown
+    // under an older table know to reload (LiveCardRefresh).
+    internal static int Generation { get; private set; }
+
+    private static bool _loaded;
+    private static string _appliedSwitches = "";
+
     // Every pack found at the last load, including disabled and skipped ones.
     internal static IReadOnlyList<DiscoveredPack> Packs { get; private set; } = Array.Empty<DiscoveredPack>();
 
@@ -52,9 +59,8 @@ internal static class FullArtPackRegistry
 
         _roots = plan.Roots;
         GpuTextureVariants.Load(plan.Roots);
-        CardsByRuntimeModel = new Dictionary<string, FullArtCardEntry>(plan.Cards, StringComparer.OrdinalIgnoreCase);
-        CardOwners = plan.CardOwners;
-        ReplacementCache.Clear();
+        Publish(plan, disabled);
+        _loaded = true;
 
         foreach (DiscoveredPack pack in discovery.Packs)
         {
@@ -67,8 +73,35 @@ internal static class FullArtPackRegistry
         GD.Print($"[{ModId}] loaded {CardsByRuntimeModel.Count} card art mappings from {discovery.Packs.Count} packs.");
     }
 
+    // Applies changed pack switches to the card table without rediscovering packs.
+    // Pack roots do not depend on the switches, so every cached texture, layer
+    // verdict and GPU variant stays valid. Main thread only.
+    internal static bool ApplySwitches()
+    {
+        if (!_loaded) return false;
+        ISet<string> disabled = FullArtModConfig.DisabledPackIds();
+        if (FullArtModConfig.FormatPackIds(disabled) == _appliedSwitches) return false;
+
+        Publish(Plan(ModDirectory, Packs, disabled), disabled);
+        Generation++;
+        string off = disabled.Count == 0 ? "none" : string.Join(", ", disabled.OrderBy(id => id, StringComparer.Ordinal));
+        GD.Print($"[{ModId}] Pack switches applied: {CardsByRuntimeModel.Count} cards have full art; switched off: {off}.");
+        return true;
+    }
+
+    private static void Publish(PackLoadPlan plan, ISet<string> disabled)
+    {
+        // Replace, then clear: a reader never sees the new table with old cached verdicts.
+        CardsByRuntimeModel = new Dictionary<string, FullArtCardEntry>(plan.Cards, StringComparer.OrdinalIgnoreCase);
+        CardOwners = plan.CardOwners;
+        ReplacementCache.Clear();
+        _appliedSwitches = FullArtModConfig.FormatPackIds(disabled);
+    }
+
     // Pure: no Godot, no globals. Packs are applied in PackDiscovery.ApplicationOrder,
-    // so the winner of a card is the highest-priority, latest-source pack.
+    // so the winner of a card is the highest-priority, latest-source pack. Roots are
+    // numbered from every usable pack, switched on or not, so a card's path prefix
+    // never changes when the switches do.
     internal static PackLoadPlan Plan(string modDirectory, IEnumerable<DiscoveredPack> packs, ISet<string> disabledIds)
     {
         var roots = new List<string> { modDirectory };
@@ -80,18 +113,20 @@ internal static class FullArtPackRegistry
         var owners = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var overrides = new List<string>();
 
-        IEnumerable<DiscoveredPack> active = packs.Where(pack => pack.SkipReason is null && !disabledIds.Contains(pack.Id));
-        foreach (DiscoveredPack pack in PackDiscovery.ApplicationOrder(active))
+        DiscoveredPack[] usable = PackDiscovery.ApplicationOrder(packs.Where(pack => pack.SkipReason is null)).ToArray();
+        foreach (DiscoveredPack pack in usable)
         {
             string root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(pack.Root));
-            if (!rootIndexes.TryGetValue(root, out int index))
+            if (!rootIndexes.ContainsKey(root))
             {
-                index = roots.Count;
+                rootIndexes[root] = roots.Count;
                 roots.Add(root);
-                rootIndexes[root] = index;
             }
+        }
 
-            string prefix = PackPaths.Prefix(index);
+        foreach (DiscoveredPack pack in usable.Where(pack => !disabledIds.Contains(pack.Id)))
+        {
+            string prefix = PackPaths.Prefix(rootIndexes[Path.TrimEndingDirectorySeparator(Path.GetFullPath(pack.Root))]);
             foreach (FullArtCardEntry card in pack.Cards)
             {
                 if (owners.TryGetValue(card.RuntimeModel, out string? owner) && owner != pack.Id)
