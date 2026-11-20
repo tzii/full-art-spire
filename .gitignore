@@ -18,3 +18,6 @@ dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# The website: the gh-pages branch, checked out with git worktree add site gh-pages
+site/

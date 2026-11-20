@@ -49,3 +49,6 @@ comes from NuGet.
 - `docs/release.md` — packaging and the release checklist (GitHub, Nexus, Workshop)
 - `store/` — Workshop and Nexus page text, Workshop settings, preview image and
   item ID; `package_mod.py --workshop` reads it
+- `site/` (ignored on `main`) — the showcase website, branch `gh-pages`
+  (`git worktree add site gh-pages`), served at `tzii.github.io/full-art-spire`;
+  its images stay on that branch, never on `main`
