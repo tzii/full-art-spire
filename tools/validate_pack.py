@@ -9,8 +9,6 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 
-ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_RELEASE_ROOT = ROOT / "release" / "standalone" / "full_art_card_packs"
 EXPECTED_FORMAT = "sts2_full_art_standalone_pack"
 EXPECTED_VERSION = 1
 CANONICAL_ID_RE = re.compile(r"^[a-z0-9]+(?:_[a-z0-9]+)*$")
@@ -372,7 +370,7 @@ def validate_enabled_effect(
 def validate_card(
     card: dict[str, Any],
     index: int,
-    root: Path,
+    root: Path | None,
     release_root: Path,
     allow_missing_masks: bool,
     allow_missing_release_art: bool,
@@ -402,8 +400,10 @@ def validate_card(
     if repo_final:
         if not is_png_path(repo_final):
             add_issue(issues, f"{label}: repo_final_png must point to a .png file")
-        repo_final_path = resolve_under(root, repo_final)
-        if repo_final_path is None:
+        repo_final_path = resolve_under(root, repo_final) if root is not None else None
+        if root is None:
+            pass  # No art repository given: only the path shape is checked.
+        elif repo_final_path is None:
             missing_repo_final_art += 1
             add_issue(issues, f"{label}: repo_final_png must be a relative path under --root")
         elif not repo_final_path.is_file():
@@ -475,7 +475,7 @@ def validate_release_packs(pack_paths: list[Path]) -> list[str]:
 
 def validate_pack(
     pack: dict[str, Any],
-    root: Path,
+    root: Path | None,
     release_root: Path,
     allow_missing_masks: bool,
     allow_missing_release_art: bool,
@@ -569,12 +569,12 @@ def format_count(label: str, count: int, allowed: bool = False) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate a standalone full-art pack manifest.")
     parser.add_argument("--pack", type=Path, required=True, help="Standalone pack JSON to validate.")
-    parser.add_argument("--root", type=Path, default=ROOT, help="Repository root for repo_final_png paths.")
+    parser.add_argument("--root", type=Path, default=None, help="Art repository root; when given, each repo_final_png must exist under it.")
     parser.add_argument(
         "--release-root",
         type=Path,
-        default=DEFAULT_RELEASE_ROOT,
-        help="Standalone release root for art and effects paths.",
+        default=None,
+        help="Mod folder for art and effects paths (default: the folder containing packs/).",
     )
     parser.add_argument("--allow-missing-masks", action="store_true", help="Development only: warn instead of fail for missing approved mask files; audit failures still fail.")
     parser.add_argument(
@@ -586,11 +586,17 @@ def main() -> int:
 
     issues: list[str] = []
     pack_path = args.pack if args.pack.is_absolute() else Path.cwd() / args.pack
+    release_root = args.release_root
+    if release_root is None:
+        release_root = pack_path.parent.parent if pack_path.parent.name == "packs" else pack_path.parent
+    elif not release_root.is_absolute():
+        release_root = Path.cwd() / release_root
+    root = None if args.root is None else (args.root if args.root.is_absolute() else Path.cwd() / args.root)
     pack = load_pack(pack_path, issues)
     validation_issues, warnings, cards, missing_repo_final_art, missing_release_art, missing_masks = validate_pack(
         pack,
-        args.root if args.root.is_absolute() else Path.cwd() / args.root,
-        args.release_root if args.release_root.is_absolute() else Path.cwd() / args.release_root,
+        root,
+        release_root,
         args.allow_missing_masks,
         args.allow_missing_release_art,
     )
