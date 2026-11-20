@@ -4,9 +4,9 @@ name: tools
 on:
   push:
     branches: [main]
-    paths: ["tools/**", "mod/**", "src/FullArtSpire/Shaders/**", "CHANGELOG.md", "docs/pack.schema.json", ".github/workflows/tools.yml"]
+    paths: ["tools/**", "mod/**", "src/FullArtSpire/Shaders/**", "store/**", "CHANGELOG.md", "docs/pack.schema.json", ".github/workflows/tools.yml"]
   pull_request:
-    paths: ["tools/**", "mod/**", "src/FullArtSpire/Shaders/**", "CHANGELOG.md", "docs/pack.schema.json", ".github/workflows/tools.yml"]
+    paths: ["tools/**", "mod/**", "src/FullArtSpire/Shaders/**", "store/**", "CHANGELOG.md", "docs/pack.schema.json", ".github/workflows/tools.yml"]
 
 permissions:
   contents: read
