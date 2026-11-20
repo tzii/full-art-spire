@@ -1,7 +1,10 @@
 """Assemble the Full Art Spire mod folder from this repository's build and pack sources.
 
 Output: <output>/full_art_spire/ (the folder players put in the game's mods/),
-<output>/package-receipt.json, and with --zip <output>/FullArtSpire-<version>.zip.
+<output>/package-receipt.json, with --zip <output>/FullArtSpire-<version>.zip, and
+with --workshop <output>/workshop/, a workspace for Mega Crit's Steam Workshop
+uploader (content/, workshop.json, image.png, and mod_id.txt once the item
+exists), filled from store/. Uploading stays a separate, manual step.
 
 A pack source is either
   * a mod-shaped folder, as the art repository builds it (packs/*.pack plus the
@@ -51,6 +54,17 @@ DEFAULT_DLL = REPO / "src" / "FullArtSpire" / "bin" / "Release" / "net9.0" / DLL
 SHADERS = REPO / "src" / "FullArtSpire" / "Shaders"
 MANIFEST = REPO / "mod" / f"{MOD_ID}.json"
 CHANGELOG = REPO / "CHANGELOG.md"
+STORE = REPO / "store"
+WORKSHOP_CONFIG = "workshop.json"
+WORKSHOP_DESCRIPTION = "workshop-description.bbcode"
+WORKSHOP_IMAGE = "workshop-image.png"
+WORKSHOP_ITEM_ID = "workshop-item-id.txt"
+# The workshop.json fields Mega Crit's uploader reads (github.com/megacrit/sts2-mod-uploader)
+# that store/workshop.json may set; description, changeNote and visibility are filled in here.
+UPLOADER_FIELDS = frozenset({"title", "tags", "dependencies", "contentDescriptors", "minBranch", "maxBranch"})
+STEAM_IMAGE_LIMIT = 1_000_000  # the uploader: "must be less than 1MB"
+STEAM_TITLE_LIMIT = 128
+STEAM_TEXT_LIMIT = 8000        # description and change note, in characters
 AUDIT = "gpu-textures.audit"
 REENCODE_AUDIT = "png-reencode.audit"
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
@@ -483,6 +497,100 @@ def assemble(sources: list[Path], dll: Path, version: str | None, output: Path, 
     }
 
 
+@dataclass
+class Store:
+    config: dict
+    description: str
+    image: Path
+    item_id: str | None
+
+
+def read_store(store: Path = STORE) -> Store:
+    """Checks the Workshop inputs in store/ without writing anything."""
+    config = read_json(store / WORKSHOP_CONFIG)
+    if not isinstance(config, dict) or not set(config) <= UPLOADER_FIELDS:
+        raise PackageError(f"{store / WORKSHOP_CONFIG}: allowed fields are {sorted(UPLOADER_FIELDS)}")
+    title = config.get("title")
+    if not isinstance(title, str) or not title.strip() or len(title) > STEAM_TITLE_LIMIT:
+        raise PackageError(f"{store / WORKSHOP_CONFIG}: title must be 1-{STEAM_TITLE_LIMIT} characters")
+    dependencies = config.get("dependencies") or []
+    if not isinstance(dependencies, list) or not all(isinstance(item, int) and item > 0 for item in dependencies):
+        raise PackageError(f"{store / WORKSHOP_CONFIG}: dependencies are Workshop item IDs (numbers)")
+    try:
+        description = (store / WORKSHOP_DESCRIPTION).read_text(encoding="utf-8").strip()
+    except OSError as error:
+        raise PackageError(f"cannot read {store / WORKSHOP_DESCRIPTION}: {error}") from error
+    if not description or len(description) > STEAM_TEXT_LIMIT:
+        raise PackageError(f"{store / WORKSHOP_DESCRIPTION}: must be 1-{STEAM_TEXT_LIMIT} characters, "
+                           f"is {len(description)}")
+    image = store / WORKSHOP_IMAGE
+    if not image.is_file() or image.read_bytes()[:len(PNG_SIGNATURE)] != PNG_SIGNATURE:
+        raise PackageError(f"{image}: the uploader needs a PNG")
+    if image.stat().st_size >= STEAM_IMAGE_LIMIT:
+        raise PackageError(f"{image}: must be under 1 MB for Steam, is {image.stat().st_size} bytes")
+    item_id = None
+    if (store / WORKSHOP_ITEM_ID).is_file():
+        item_id = (store / WORKSHOP_ITEM_ID).read_text(encoding="utf-8").strip()
+        if not item_id.isdigit():
+            raise PackageError(f"{store / WORKSHOP_ITEM_ID}: must hold the Workshop item ID (a number)")
+    return Store(config, description, image, item_id)
+
+
+def changelog_bullets(changelog: Path, version: str) -> list[str]:
+    """The bullets under '## <version>' in the changelog; a pre-release falls back to its base version."""
+    lines = changelog.read_text(encoding="utf-8").splitlines()
+    for wanted in dict.fromkeys((version, version.split("-")[0])):
+        bullets: list[str] = []
+        inside = False
+        for line in lines:
+            if line.startswith("## "):
+                if inside:
+                    break
+                inside = line[3:].split(" ")[0] == wanted
+            elif inside and line.startswith("- "):
+                bullets.append(line[2:].strip())
+            elif inside and bullets and line.startswith("  ") and line.strip():
+                bullets[-1] += " " + line.strip()
+        if bullets:
+            return bullets
+    return []
+
+
+def stage_workshop(output: Path, version: str, store: Path = STORE, changelog: Path = CHANGELOG) -> dict:
+    """Lays out <output>/workshop/ for `ModUploader.exe upload -w <output>/workshop`."""
+    inputs = read_store(store)
+    bullets = changelog_bullets(changelog, version)
+    note = ("[list]\n" + "".join(f"[*]{item.replace('`', '')}\n" for item in bullets) + "[/list]"
+            if bullets else f"Version {version}")
+    if len(note) > STEAM_TEXT_LIMIT:
+        raise PackageError(f"the {version} changelog is too long for a Steam change note ({len(note)} characters)")
+    workspace = output / "workshop"
+    if workspace.exists():
+        raise PackageError(f"output folder already exists: {workspace}")
+    config = {**inputs.config, "description": inputs.description, "changeNote": note}
+    if inputs.item_id is None:
+        # A new item starts private, to be checked on Steam before anyone sees it. Later
+        # uploads leave visibility out, so the uploader keeps what was chosen on Steam.
+        config["visibility"] = "private"
+    stage = output / MOD_ID
+    content = workspace / "content"
+    for path in sorted(stage.rglob("*")):
+        if path.is_file():
+            target = content / path.relative_to(stage)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                os.link(path, target)  # The same files as the mod folder; the uploader only reads them.
+            except OSError:
+                shutil.copyfile(path, target)
+    (workspace / WORKSHOP_CONFIG).write_text(json.dumps(config, indent=2, ensure_ascii=False) + "\n",
+                                             encoding="utf-8", newline="\n")
+    shutil.copyfile(inputs.image, workspace / "image.png")
+    if inputs.item_id is not None:
+        (workspace / "mod_id.txt").write_text(inputs.item_id + "\n", encoding="utf-8", newline="\n")
+    return {"workspace": workspace.name, "item_id": inputs.item_id, "visibility": config.get("visibility"),
+            "dependencies": config.get("dependencies", []), "image_bytes": inputs.image.stat().st_size}
+
+
 def zip_level(name: str) -> int:
     return PNG_ZIP_LEVEL if name.lower().endswith(".png") else ZIP_LEVEL
 
@@ -516,6 +624,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--build", action="store_true", help="run dotnet build -c Release first")
     parser.add_argument("--version", help="override the manifest version")
     parser.add_argument("--zip", action="store_true", help="also write FullArtSpire-<version>.zip")
+    parser.add_argument("--workshop", action="store_true",
+                        help="also lay out <output>/workshop/ for Mega Crit's Workshop uploader, from store/")
     parser.add_argument("--hardlink", action="store_true", help="hard-link pack files instead of copying, where possible")
     parser.add_argument("--optimize-png", action="store_true",
                         help="re-encode shipped PNGs losslessly, keeping identical pixels (needs Pillow)")
@@ -525,6 +635,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.strip_content_credentials and not args.optimize_png:
         parser.error("--strip-content-credentials needs --optimize-png")
     try:
+        if args.workshop:
+            read_store()  # Fail before the long build and copy, not after.
         if args.build:
             subprocess.run(["dotnet", "build", str(REPO / "src" / "FullArtSpire"), "-c", "Release", "-nologo", "-v", "q"], check=True)
         output = args.output.resolve()
@@ -534,6 +646,8 @@ def main(argv: list[str] | None = None) -> int:
             archive = output / f"FullArtSpire-{receipt['version']}.zip"
             zip_folder(output / MOD_ID, archive)
             receipt["archive"] = {"name": archive.name, "bytes": archive.stat().st_size, "sha256": sha256(archive)}
+        if args.workshop:
+            receipt["workshop"] = stage_workshop(output, receipt["version"])
         (output / "package-receipt.json").write_text(json.dumps(receipt, indent=1) + "\n", encoding="utf-8", newline="\n")
     except (PackageError, subprocess.CalledProcessError) as error:
         print(f"error: {error}", file=sys.stderr)
@@ -545,6 +659,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"re-encoded PNGs: {receipt['reencoded_pngs']} in {REENCODE_AUDIT} "
               f"({receipt['content_credentials_removed']} without their C2PA Content Credentials), "
               f"{receipt['reencode_saved_bytes'] / 1e6:.0f} MB saved this run")
+    if "workshop" in receipt:
+        item = receipt["workshop"]["item_id"]
+        print(f"Workshop workspace: {output / 'workshop'} "
+              + (f"(updates item {item})" if item else "(creates a new private item; save its ID afterwards)"))
     if receipt["runtime"]["dirty"]:
         print("warning: built from a working tree with uncommitted changes", file=sys.stderr)
     return 0

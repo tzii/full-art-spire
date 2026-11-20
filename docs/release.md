@@ -9,11 +9,17 @@ art repository; this repository adds the runtime and assembles the mod folder.
   warns about uncommitted changes).
 - **Packs:** one or more pack sources built by the art repository: mod-shaped
   folders (`packs/*.pack` with `art/`, `layers/`, `effects/`, `gpu/` and
-  `gpu-textures.audit`) or v2 pack folders (`pack.json`). For packs of another
+  `gpu-textures.audit`) or v2 pack folders (`pack.json`). A mod folder the art
+  repository's packs were installed into works too. For packs of another
   mod's characters, that mod author's written permission.
 - **Versions:** set `version` in `mod/full_art_spire.json` and add the
-  `CHANGELOG.md` entry. `min_game_version` and the BaseLib `min_version` must
-  match what was tested.
+  `CHANGELOG.md` entry; its bullets become the Workshop change note.
+  `min_game_version` and the BaseLib `min_version` must match what was tested,
+  and the BaseLib package version in `src/FullArtSpire/FullArtSpire.csproj`
+  must equal that `min_version`.
+- **Store text:** card counts, game versions and features in
+  `mod/full_art_spire.json` (shown in game), `store/workshop-description.bbcode`
+  and `store/nexus-description.bbcode` match the release.
 
 ## 2. Build and test
 
@@ -29,14 +35,22 @@ Optionally check real packs with the runtime's own discovery:
 ## 3. Package
 
 ```bash
-python tools/package_mod.py --build --zip --optimize-png --strip-content-credentials \
-  --pack-source <art repo release folder> [--pack-source <more>] \
+python tools/package_mod.py --build --zip --workshop --optimize-png --strip-content-credentials \
+  --pack-source <pack source> [--pack-source <more>] \
   --output dist/<version>
 ```
 
 - Writes `dist/<version>/full_art_spire/`, `FullArtSpire-<version>.zip` (one
   top-level `full_art_spire/` folder) and `package-receipt.json` (counts,
   runtime commit, DLL and archive hashes, every file's hash).
+- `--workshop` also writes `dist/<version>/workshop/`, the workspace Mega
+  Crit's uploader takes: `content/` (the mod folder's files, hard-linked),
+  `workshop.json` (`store/workshop.json` plus the description from
+  `store/workshop-description.bbcode` and this version's changelog as the change
+  note), `image.png` (`store/workshop-image.png`, under 1 MB) and, once the item
+  exists, `mod_id.txt` from `store/workshop-item-id.txt`. Without an item ID the
+  upload creates a new, private item; with one it updates that item and leaves
+  its visibility alone. The store inputs are checked before the build starts.
 - Copies only what cards reference, hash-checks every GPU variant and merges
   the GPU indexes. A later `--pack-source` replaces an earlier one's pack of the
   same name; conflicting files fail the build.
@@ -84,13 +98,48 @@ QA.
    sample of every pool.
 6. With a pack from another mod or the player folder (when one exists): it
    loads, and its overrides appear in the log.
+7. **From the Workshop** (after the private upload in step 5): remove the
+   copied `full_art_spire/` from `mods/`, subscribe to the private item, and
+   check that Steam pulls in BaseLib, the mod loads from the Workshop folder,
+   and steps 3 to 5 still hold.
 
 ## 5. Publish
 
-- Upload the zip to the Nexus page; the old Full Art Card Packs page links to
-  it and tells players to delete the `full_art_card_packs` folder.
-- Credit Mega Crit and BaseLib, and describe preview quality honestly.
-- Say on the mod page that the full-art extensions and backgrounds are
-  AI-generated from the original card art, and that the release strips the
-  images' C2PA Content Credentials to save space.
-- Tag the commit `v<version>`.
+The Workshop item goes up first, private, so step 4.7 can run on it before
+anything is public.
+
+**Steam Workshop**
+
+1. Get `ModUploader-win-x64.zip` from
+   [megacrit/sts2-mod-uploader](https://github.com/megacrit/sts2-mod-uploader/releases)
+   (outside this repository). Steam must be running and signed in.
+2. `ModUploader.exe upload -w <repo>/dist/<version>/workshop`. Its log is
+   `mod-uploader.log` next to the executable.
+3. First upload only: the uploader writes the new item's ID to
+   `dist/<version>/workshop/mod_id.txt`. Copy it to `store/workshop-item-id.txt`
+   and commit it, or the next release creates a second item.
+4. On the item's Steam page: check the text, image and BaseLib under Required
+   items; add gallery images; run step 4.7; then set it public.
+
+**Nexus Mods**
+
+1. Upload the zip to the Full Art Spire page and paste
+   `store/nexus-description.bbcode`; BaseLib (mods/103) is a requirement.
+2. Choose the "AI-Generated Content" label: the full-art extensions and
+   backgrounds are AI-generated from the original card art.
+3. Permissions: asset use, uploading to other sites, commercial use and
+   conversion to other games all off; point modders to the MIT code on GitHub.
+4. The old Full Art Card Packs page links to the new one and tells players to
+   delete the `full_art_card_packs` folder.
+
+**GitHub**
+
+1. Tag the release commit `v<version>` and push the tag.
+2. `gh release create v<version> dist/<version>/FullArtSpire-<version>.zip
+   --title "Full Art Spire <version>" --notes-file <this version's changelog section>`.
+   Release files may be up to 2 GiB each.
+
+Everywhere: credit Mega Crit and BaseLib, describe preview quality honestly,
+and say that the full-art extensions and backgrounds are AI-generated from the
+original card art and that the release strips the images' C2PA Content
+Credentials to save space. The store files in `store/` already do.

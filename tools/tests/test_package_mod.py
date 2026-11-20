@@ -275,5 +275,99 @@ class PackageTests(unittest.TestCase):
         self.assertFalse((self.output / "full_art_spire" / package_mod.REENCODE_AUDIT).exists())
 
 
+class WorkshopTests(unittest.TestCase):
+    BASELIB = 3737335127
+
+    def setUp(self) -> None:
+        self._temp = tempfile.TemporaryDirectory(prefix="fas-workshop-")
+        self.root = Path(self._temp.name)
+        self.output = self.root / "out"
+        stage = self.output / "full_art_spire"
+        write(stage / "full_art_spire.dll", b"MZ fake runtime")
+        write(stage / "full_art_spire.json", "{}")
+        write(stage / "art" / "strike.png", b"strike")
+        self.store = self.root / "store"
+        write_json(self.store / "workshop.json", {"title": "Full Art Spire", "tags": ["Cards"],
+                                                  "dependencies": [self.BASELIB]})
+        write(self.store / "workshop-description.bbcode", "[h1]Full Art Spire[/h1]\n")
+        write(self.store / "workshop-image.png", package_mod.PNG_SIGNATURE + b"preview")
+        self.changelog = write(self.root / "CHANGELOG.md", "# Changelog\n\n## 0.4.0 - unreleased\n\n"
+                               "- Renamed to `Full Art Spire`.\n- Packs can come\n  from other mods.\n\n"
+                               "## 0.3.4 - older\n\n- Not in this note.\n")
+
+    def tearDown(self) -> None:
+        self._temp.cleanup()
+
+    def stage(self, version: str = "0.4.0") -> dict:
+        return package_mod.stage_workshop(self.output, version, self.store, self.changelog)
+
+    def config(self) -> dict:
+        return json.loads((self.output / "workshop" / "workshop.json").read_text(encoding="utf-8"))
+
+    def test_new_item_workspace(self) -> None:
+        info = self.stage()
+        workspace = self.output / "workshop"
+        stage = self.output / "full_art_spire"
+        listing = lambda root: sorted(path.relative_to(root).as_posix() for path in root.rglob("*") if path.is_file())
+        self.assertEqual(listing(stage), listing(workspace / "content"), "content/ is the mod folder's contents")
+        self.assertEqual(b"strike", (workspace / "content" / "art" / "strike.png").read_bytes())
+        config = self.config()
+        self.assertEqual("private", config["visibility"])
+        self.assertEqual([self.BASELIB], config["dependencies"])
+        self.assertEqual("[h1]Full Art Spire[/h1]", config["description"])
+        self.assertEqual("[list]\n[*]Renamed to Full Art Spire.\n[*]Packs can come from other mods.\n[/list]",
+                         config["changeNote"])
+        self.assertEqual((self.store / "workshop-image.png").read_bytes(), (workspace / "image.png").read_bytes())
+        self.assertFalse((workspace / "mod_id.txt").exists(), "no ID yet: the uploader creates the item")
+        self.assertIsNone(info["item_id"])
+
+    def test_update_reuses_the_item_and_keeps_its_visibility(self) -> None:
+        write(self.store / "workshop-item-id.txt", "3900000001\n")
+        info = self.stage("0.4.0-rc2")
+        self.assertEqual("3900000001\n", (self.output / "workshop" / "mod_id.txt").read_text(encoding="utf-8"))
+        config = self.config()
+        self.assertNotIn("visibility", config)
+        self.assertIn("Renamed to Full Art Spire.", config["changeNote"], "a pre-release uses its base version's notes")
+        self.assertEqual("3900000001", info["item_id"])
+
+    def test_version_without_notes(self) -> None:
+        self.stage("0.9.0")
+        self.assertEqual("Version 0.9.0", self.config()["changeNote"])
+
+    def test_bad_inputs_fail_before_writing(self) -> None:
+        cases = [
+            ("workshop-image.png", b"\xff\xd8 a JPEG", "needs a PNG"),
+            ("workshop-image.png", package_mod.PNG_SIGNATURE + bytes(package_mod.STEAM_IMAGE_LIMIT), "under 1 MB"),
+            ("workshop.json", json.dumps({"title": "x", "dependencies": ["BaseLib"]}), "item IDs"),
+            ("workshop.json", json.dumps({"title": "x", "visibility": "public"}), "allowed fields"),
+            ("workshop.json", json.dumps({"title": ""}), "title"),
+            ("workshop-description.bbcode", "x" * (package_mod.STEAM_TEXT_LIMIT + 1), "characters"),
+            ("workshop-item-id.txt", "not a number", "item ID"),
+        ]
+        for name, data, message in cases:
+            original = (self.store / name).read_bytes() if (self.store / name).exists() else None
+            write(self.store / name, data)
+            with self.subTest(name=name, message=message):
+                with self.assertRaisesRegex(package_mod.PackageError, message):
+                    self.stage()
+                self.assertFalse((self.output / "workshop").exists())
+            if original is None:
+                (self.store / name).unlink()
+            else:
+                write(self.store / name, original)
+
+    def test_existing_workspace_is_not_overwritten(self) -> None:
+        (self.output / "workshop").mkdir()
+        with self.assertRaisesRegex(package_mod.PackageError, "already exists"):
+            self.stage()
+
+    def test_repository_store_is_valid(self) -> None:
+        store = package_mod.read_store()
+        self.assertEqual("Full Art Spire", store.config["title"])
+        self.assertIn(self.BASELIB, store.config["dependencies"], "BaseLib is a required Workshop item")
+        self.assertIn("AI-generated", store.description)
+        self.assertIn("Mega Crit", store.description)
+
+
 if __name__ == "__main__":
     unittest.main()

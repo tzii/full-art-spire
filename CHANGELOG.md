@@ -2,6 +2,8 @@
 
 ## 0.4.0 - unreleased
 
+- Full art for all 90 cards of the Fool (public beta). On the beta, 50 other new cards keep their original art for now.
+- Now on the Steam Workshop too, with BaseLib as a required item.
 - Renamed to Full Art Spire (mod id `full_art_spire`). Delete the old `full_art_card_packs` folder after installing.
 - While the old mod is still installed and enabled, Full Art Spire stays inactive and shows a warning on the main menu, so the two never patch the same cards.
 - Packs can now come from other mods (a `full_art/` folder inside the mod) and from your own `full_art_spire/packs/` folder in the game's user data, using the new pack format (`pack.json`). Old `.pack` files still load.

@@ -10,9 +10,15 @@ gameplay, balance or card-data changes.
 
 ## Boundaries
 
-- This repo holds code, the pack format, tooling and small test fixtures only.
-  Artwork, prompts, candidates and review evidence live in the art repo
-  `tzii/sts2-full-art-card-pack`; packs arrive here as build inputs, not commits.
+- This repo holds code, the pack format, tooling, store text and small test
+  fixtures only. Artwork, prompts, candidates and review evidence live in the
+  art repo `tzii/sts2-full-art-card-pack`; packs arrive here as build inputs,
+  not commits. Complete builds go out as GitHub Release assets and Nexus and
+  Workshop uploads.
+- The art repo stays private (it holds art extracted from the game): public
+  docs and store text never link to it.
+- Commits are authored as `tzii` with the GitHub noreply address (set in this
+  repo's git config), never a personal email.
 - Cards are matched by `runtime_model`, the card model's full .NET type name.
   Never key by display name or portrait path.
 - Keep reading v1 `.pack` files until a release explicitly drops them.
@@ -28,15 +34,18 @@ gameplay, balance or card-data changes.
 dotnet build src/FullArtSpire -c Release
 dotnet run --project src/FullArtSpire.Tests
 python -m unittest discover -s tools/tests
-python tools/package_mod.py --build --pack-source <art release folder> --output dist/<name>
+python tools/package_mod.py --build --pack-source <pack source> --output dist/<name>   # release: see docs/release.md
 python tools/validate_pack.py --mod-folder <mod-folder>   # or --pack <v2 folder | v1 .pack>
 ```
 
-The build needs an installed game (see `src/Sts2PathDiscovery.props`).
+The build needs an installed game (see `src/Sts2PathDiscovery.props`); BaseLib
+comes from NuGet.
 
 ## Docs
 
 - `docs/architecture.md` — how the runtime works
 - `docs/pack-format.md` — v1 (still read) and v2 (implemented)
 - `docs/roadmap.md` — phases and open decisions
-- `docs/release.md` — packaging and the release checklist
+- `docs/release.md` — packaging and the release checklist (GitHub, Nexus, Workshop)
+- `store/` — Workshop and Nexus page text, Workshop settings, preview image and
+  item ID; `package_mod.py --workshop` reads it

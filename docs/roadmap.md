@@ -25,7 +25,7 @@
   game's DLLs). **Done:** `.github/workflows/tools.yml`.
 - First in-game pass of 0.4.0 (`docs/release.md`, step 4). **Done
   (2026-11-20), by the maintainer on game v0.113.1 with BaseLib 3.4.8**, using
-  `0.4.0-qa2` (commit `9bd8175`) built from the installed 0.3.4 packs:
+  `0.4.0-qa2` (commit `764fc6f`) built from the installed 0.3.4 packs:
   - with the old mod installed, the main-menu warning showed and the old mod
     kept working; the pack selection was recorded;
   - with it removed, settings were imported and all 12 packs (667 cards)
@@ -34,6 +34,37 @@
   - switching a character's pack off and on worked after a restart.
   Not checked: Restore defaults switching every pack back on. BaseLib titles
   the warning popup "Mod configuration error", which overstates it.
+- The Fool's pack (90 cards, public beta v0.113) ships in 0.4.0. The
+  maintainer played a full run with it (reported 2026-11-20). Its art is
+  plain PNG, without GPU variants; the art repo can add them later.
+- Steam Workshop from day one, alongside Nexus and GitHub Releases.
+  **Done in code (2026-11-20), nothing uploaded yet:** `package_mod.py
+  --workshop` stages the workspace for Mega Crit's uploader from `store/`
+  (text, settings with BaseLib's item 3737335127 as a dependency, an 864 px
+  preview at 919 KB). How the game loads the mod from the Workshop folder is
+  untried (`docs/release.md`, step 4.7).
+
+## Art coverage
+
+Measured 2026-11-20 against the art repo's v0.113.1 roster export (717 runtime
+models, 716 public): the 0.4.0 packs cover 666. `Scare` (in the packs) no
+longer exists in v0.113.1; its entry is inert. These 50 new cards have no full
+art yet, and making it is art repo work, planned for 0.4.1:
+
+- token (25): the 22 Major Arcana tarot cards (`TheFool` to `TheWorld`, with
+  `Death`, `Judgement`, `Justice`, `Strength`, `Temperance` and
+  `WheelOfFortune`), plus `Amnesia`, `Joy` and `TheShot`;
+- event (5): `Abundance`, `DingyDagger`, `GodByrd`, `MightyShield`,
+  `MightyWeapon`;
+- silent (4): `BladeSymphony`, `Concoct`, `Fade`, `Sidestep`;
+- defect, ironclad, necrobinder and regent (3 each): `Hibernate`,
+  `ImitationLearning`, `OneForAll`; `Blaze`, `Midnight`, `Outrage`;
+  `Cacophony`, `Soulbound`, `Underworld`; `Constellation`, `Plot`, `Tutor`;
+- colorless (2): `MyShinies`, `TheBall`;
+- quest (1): `Dowsing`; status (1): `Sadness`.
+
+No curse is missing. Not checked here: portraits Mega Crit changed for cards
+that already have full art, whose extensions may need a redo.
 
 ## Phase 2 — pack authors and modded characters
 
@@ -75,11 +106,23 @@
   other mod depends on the id. Required with it: detect an installed
   `full_art_card_packs`, warn and stay inactive until it is removed (both
   would patch the same cards); import the old BaseLib settings and cfg.
-- **Distribution:** a new Nexus page carrying everything. The old page links to
-  it and tells users to delete the old `full_art_card_packs` folder.
+- **Distribution (updated 2026-11-20):** from 0.4.0, the Steam Workshop, a new
+  Nexus page and GitHub Releases, all carrying every card. The old Nexus page
+  links to the new one and tells users to delete the old
+  `full_art_card_packs` folder.
+- **Repositories (2026-11-20):** this repository goes public; the art repo
+  stays private under its current name. It holds art extracted from the game
+  (including beta exports) and about 9 GB of LFS objects whose downloads
+  would count against the owner's quota. Card art never enters this
+  repository's git history; complete builds are attached to GitHub Releases.
+- **License (2026-11-20):** MIT for the code, docs, pack format and schema,
+  with an explicit note that it covers no artwork.
+- **BaseLib (2026-11-20):** referenced from NuGet (`Alchyr.Sts2.BaseLib`,
+  MIT) at the manifest's minimum version, instead of committed binaries.
+- **Commit identity (2026-11-20):** every commit is authored as `tzii` with
+  the GitHub noreply address; the history was rewritten once to make it so.
 
 ## Open decisions
 
-- **Art repo name** (keep, or e.g. `sts2-full-art-studio`).
-- **Before going public:** choose a license, and confirm `lib/BaseLib.*` may be
-  redistributed (or fetch BaseLib at build time instead).
+- When the 50 new v0.113 cards (Art coverage) ship: 0.4.1, or when the beta
+  reaches the main branch.
