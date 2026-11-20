@@ -3,6 +3,8 @@ using System.Text.Json.Serialization;
 
 namespace FullArtSpire;
 
+// The 0.3.x pack cfg (full_art_card_packs.cfg). Read only to carry a player's
+// pack choices over; 0.4.0 has per-pack switches instead.
 internal sealed record FullArtConfig
 {
     [JsonPropertyName("enabled")]
@@ -24,7 +26,7 @@ internal sealed record FullArtPackManifest
     public string Pool { get; init; } = "";
 
     [JsonPropertyName("cards")]
-    public List<FullArtCardEntry>? Cards { get; init; } = new();
+    public List<FullArtCardEntry?>? Cards { get; init; } = new();
 }
 
 internal sealed record FullArtCardEntry
@@ -118,4 +120,50 @@ internal sealed record FullArtEffectMetadata
 
     [JsonPropertyName("phase_seed")]
     public float? PhaseSeed { get; init; }
+}
+
+// Pack format v2: <pack root>/pack.json. Paths in cards resolve inside the pack root.
+internal sealed record FullArtPackManifestV2
+{
+    [JsonPropertyName("format")]
+    public string Format { get; init; } = "";
+
+    [JsonPropertyName("format_version")]
+    public int FormatVersion { get; init; }
+
+    [JsonPropertyName("id")]
+    public string Id { get; init; } = "";
+
+    [JsonPropertyName("name")]
+    public string Name { get; init; } = "";
+
+    [JsonPropertyName("version")]
+    public string Version { get; init; } = "";
+
+    [JsonPropertyName("authors")]
+    public List<string>? Authors { get; init; }
+
+    [JsonPropertyName("credits")]
+    public string Credits { get; init; } = "";
+
+    [JsonPropertyName("requires")]
+    public List<PackRequirement?>? Requires { get; init; }
+
+    [JsonPropertyName("min_game_version")]
+    public string? MinGameVersion { get; init; }
+
+    [JsonPropertyName("priority")]
+    public int Priority { get; init; }
+
+    [JsonPropertyName("cards")]
+    public List<FullArtCardEntry?>? Cards { get; init; }
+}
+
+internal sealed record PackRequirement
+{
+    [JsonPropertyName("mod")]
+    public string Mod { get; init; } = "";
+
+    [JsonPropertyName("min_version")]
+    public string? MinVersion { get; init; }
 }

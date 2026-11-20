@@ -18,6 +18,7 @@ try
     FullArtSpire.Tests.LruCacheTests.Run();
     FullArtSpire.Tests.BackgroundLoaderTests.Run();
     FullArtSpire.Tests.LegacyMigrationTests.Run();
+    FullArtSpire.Tests.PackDiscoveryTests.Run();
     LayerPolicyTests.Run();
     RaritySpoofTests.Run();
     Equal(EffectSurface.Shimmer, EffectFinishSelector.Select(EffectSurface.Holo, FinishAssignment.ByRarity, TrialFinish.Foil, "Common", "card", 0), "common receives satin");

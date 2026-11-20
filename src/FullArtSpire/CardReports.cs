@@ -68,7 +68,7 @@ internal static class CardReports
         {
             schema_version = 1, recorded_at = DateTimeOffset.UtcNow.ToString("O"),
             mod_version = typeof(MainFile).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion,
-            runtime_model = model, pool = entry?.Pool, card = entry?.CanonicalAssetName,
+            runtime_model = model, pack = FullArtPackRegistry.PackFor(model), pool = entry?.Pool, card = entry?.CanonicalAssetName,
             display_name = entry?.DisplayName, source = entry?.Art, layers = entry?.Layers,
             presentation = EffectOverlayManager.StoredContext(card).Presentation.ToString(),
             layered_active = LayeredCardRenderer.HasActiveLayer(card),

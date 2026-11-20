@@ -11,12 +11,12 @@ produced in the separate art repository
 [`tzii/sts2-full-art-card-pack`](https://github.com/tzii/sts2-full-art-card-pack),
 which builds the character packs this runtime loads.
 
-Status: private, pre-0.4.0. The rename is done in code (id, assembly,
-namespace, settings), with detection of an installed 0.3.x and import of its
-settings; it has not been tried in a game session yet. Otherwise the runtime is
-the 0.3.4 code, with its history carried over from the art repository. Pack
-format v2 and support for other mods' characters are designs, not implemented
-yet. See [docs/roadmap.md](docs/roadmap.md).
+Status: private, pre-0.4.0. Done in code but not yet tried in a game session:
+the rename (with detection of an installed 0.3.x and import of its settings),
+pack format v2 with discovery in this mod, other mods and the player's folder,
+and a switch per pack in the settings. Whether other mods' cards render like
+the base game's still needs a pilot. The renderer is the 0.3.4 code, with its
+history carried over from the art repository. See [docs/roadmap.md](docs/roadmap.md).
 
 ## Layout
 

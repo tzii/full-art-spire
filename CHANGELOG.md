@@ -4,6 +4,8 @@
 
 - Renamed to Full Art Spire (mod id `full_art_spire`). Delete the old `full_art_card_packs` folder after installing.
 - While the old mod is still installed and enabled, Full Art Spire stays inactive and shows a warning on the main menu, so the two never patch the same cards.
+- Packs can now come from other mods (a `full_art/` folder inside the mod) and from your own `full_art_spire/packs/` folder in the game's user data, using the new pack format (`pack.json`). Old `.pack` files still load.
+- Every pack has its own switch in the mod's settings, under Card packs; changes apply after a restart. The `full_art_card_packs.cfg` pack list is no longer used.
 - Your Full Art Card Packs settings are imported on first start. Packs you had switched off in `full_art_card_packs.cfg` stay off if the old folder was still installed when you first started 0.4.0.
 
 ## 0.3.4 - complete layered release candidate

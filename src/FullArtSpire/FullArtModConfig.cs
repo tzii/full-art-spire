@@ -1,9 +1,23 @@
 using BaseLib.Config;
+using BaseLib.Extensions;
+using Godot;
 
 namespace FullArtSpire;
 
 public class FullArtModConfig : SimpleModConfig
 {
+    // Ids of packs the player switched off, comma-separated and sorted. Packs are
+    // on unless listed, so newly installed packs appear switched on. Edited
+    // through the pack switches in SetupConfigUI.
+    [ConfigHideInUI]
+    public static string DisabledPacks { get; set; } = "";
+
+    // Set once the packs a 0.3.x player had switched off have been copied into
+    // DisabledPacks, so later launches respect the player's own switches.
+    [ConfigHideInUI]
+    [ConfigIgnoreRestoreDefaults]
+    public static bool LegacyPackSelectionImported { get; set; } = false;
+
     public static bool EnableLayeredCards { get; set; } = true;
 
     // Decode card art off the main thread; the native portrait shows until it is ready.
@@ -66,4 +80,101 @@ public class FullArtModConfig : SimpleModConfig
 
     [ConfigSlider(0, 1, 0.05, Format = "{0:F2}")]
     public static float FocusedMotion { get; set; } = 1f;
+
+    private static string _parsedDisabledPacks = "";
+    private static HashSet<string> _disabledPackIds = new(StringComparer.Ordinal);
+
+    internal static ISet<string> DisabledPackIds()
+    {
+        string current = DisabledPacks ?? "";
+        if (!ReferenceEquals(current, _parsedDisabledPacks))
+        {
+            _disabledPackIds = ParsePackIds(current);
+            _parsedDisabledPacks = current;
+        }
+
+        return _disabledPackIds;
+    }
+
+    internal static HashSet<string> ParsePackIds(string? list)
+    {
+        return new HashSet<string>(
+            (list ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(PackDiscovery.IsValidPackId),
+            StringComparer.Ordinal);
+    }
+
+    internal static string FormatPackIds(IEnumerable<string> ids)
+        => string.Join(",", ids.Distinct(StringComparer.Ordinal).OrderBy(id => id, StringComparer.Ordinal));
+
+    internal static void SetPackEnabled(string packId, bool enabled)
+    {
+        var ids = new HashSet<string>(DisabledPackIds(), StringComparer.Ordinal);
+        if (enabled ? ids.Remove(packId) : ids.Add(packId))
+        {
+            DisabledPacks = FormatPackIds(ids);
+        }
+    }
+
+    public override void SetupConfigUI(Control optionContainer)
+    {
+        GenerateOptionsForAllProperties(optionContainer);
+        try
+        {
+            AddPackSection(optionContainer);
+        }
+        catch (Exception ex)
+        {
+            // The rest of the page still works without the pack switches.
+            GD.PushWarning($"[FullArtSpire] Could not add the pack switches: {ex}");
+        }
+
+        AddRestoreDefaultsButton(optionContainer);
+        SetupFocusNeighbors(optionContainer);
+    }
+
+    private void AddPackSection(Control optionContainer)
+    {
+        DiscoveredPack[] packs = FullArtPackRegistry.Packs
+            .Where(pack => pack.SkipReason is null)
+            .OrderBy(pack => pack.Source)
+            .ThenBy(pack => pack.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (packs.Length == 0)
+        {
+            return;
+        }
+
+        optionContainer.AddChild(CreateSectionHeader("Card packs"));
+        optionContainer.AddChild(CreateRawLabelControl("Switching a pack on or off takes effect after restarting the game.", 24));
+        for (int i = 0; i < packs.Length; i++)
+        {
+            if (i > 0)
+            {
+                optionContainer.AddChild(CreateDividerControl());
+            }
+
+            var property = new PackToggleProperty(packs[i].Id);
+            AddPackRow(optionContainer, property, PackLabel(packs[i]).Replace("[", "[lb]"));
+        }
+    }
+
+    private void AddPackRow(Control optionContainer, PackToggleProperty property, string label)
+    {
+        var tickbox = CreateRawTickboxControl(property);
+        var row = new BaseLib.Config.UI.NConfigOptionRow(ModPrefix, property.Name, CreateRawLabelControl(label, 28), tickbox);
+        tickbox.ClearFocusNeighbors();
+        optionContainer.AddChild(row);
+    }
+
+    internal static string PackLabel(DiscoveredPack pack)
+    {
+        string name = pack.Version.Length == 0 ? pack.Name : $"{pack.Name} {pack.Version}";
+        return pack.Source switch
+        {
+            PackSource.Mod => $"{name} (from {pack.SourceModId})",
+            PackSource.Player => $"{name} (your pack)",
+            _ => name,
+        };
+    }
 }

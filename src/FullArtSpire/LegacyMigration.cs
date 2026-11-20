@@ -92,7 +92,7 @@ internal static class LegacyMigration
         {
             Source = configPath,
             DisabledPacks = shipped
-                .Where(pool => FullArtPackRegistry.IsValidPoolName(pool) && !enabled.Contains(pool))
+                .Where(pool => PackDiscovery.IsValidPoolName(pool) && !enabled.Contains(pool))
                 .Distinct(StringComparer.Ordinal)
                 .OrderBy(pool => pool, StringComparer.Ordinal)
                 .ToList(),
@@ -125,17 +125,12 @@ internal static class LegacyMigration
         }
     }
 
-    internal static FullArtConfig ApplyPackSelection(FullArtConfig config, LegacyPackSelection? selection)
+    // The pack ids the selection switches off: 0.3.x pools are the v1 packs
+    // megacrit.<pool>.
+    internal static IEnumerable<string> DisabledPackIds(LegacyPackSelection? selection)
     {
-        if (selection is null || selection.DisabledPacks.Count == 0 || config.EnabledPacks is null)
-        {
-            return config;
-        }
-
-        var disabled = new HashSet<string>(selection.DisabledPacks, StringComparer.Ordinal);
-        return config with
-        {
-            EnabledPacks = config.EnabledPacks.Where(pool => !disabled.Contains(pool)).ToList(),
-        };
+        return selection?.DisabledPacks
+            .Where(PackDiscovery.IsValidPoolName)
+            .Select(PackDiscovery.LegacyPackId) ?? Enumerable.Empty<string>();
     }
 }

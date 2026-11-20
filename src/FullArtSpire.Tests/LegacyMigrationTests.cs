@@ -122,14 +122,10 @@ internal static class LegacyMigrationTests
 
     private static void AppliesAndPersistsTheSelection()
     {
-        var config = new FullArtConfig { EnabledPacks = new List<string> { "ironclad", "silent", "defect", "new_character" } };
-        Require(ReferenceEquals(config, LegacyMigration.ApplyPackSelection(config, null)), "no selection leaves the config alone");
-
-        var selection = new LegacyPackSelection { Source = "test", DisabledPacks = new List<string> { "silent", "defect" } };
-        FullArtConfig applied = LegacyMigration.ApplyPackSelection(config, selection);
-        Require(applied.EnabledPacks!.SequenceEqual(new[] { "ironclad", "new_character" }),
-            "switched-off packs stay off and packs the old mod never had stay on");
-        Require(config.EnabledPacks.Count == 4, "the loaded config is not mutated");
+        var selection = new LegacyPackSelection { Source = "test", DisabledPacks = new List<string> { "silent", "defect", "Bad-Name" } };
+        Require(LegacyMigration.DisabledPackIds(selection).SequenceEqual(new[] { "megacrit.silent", "megacrit.defect" }),
+            "0.3.x pools become the ids of their v1 packs; invalid pool names are dropped");
+        Require(!LegacyMigration.DisabledPackIds(null).Any(), "no selection switches nothing off");
 
         string directory = TempDirectory();
         try

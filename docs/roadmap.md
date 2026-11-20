@@ -14,13 +14,17 @@
   a game session:** test with the old mod installed, disabled and removed, and
   check that BaseLib's main-menu popup shows the warning.
 - Pack format v2 and discovery (`pack-format.md`), still reading v1 `.pack`.
-- Per-pack toggles in the BaseLib settings instead of the cfg allow-list.
-  Seed them from `user://full_art_spire/legacy-pack-selection.json` (packs a
-  0.3.x player had switched off).
+  **Done in code (2026-11-20).** Checked against the installed 0.3.4 packs
+  (12 v1 packs, 667 cards, all art resolved); not yet tried in a game session.
+- Per-pack toggles in the BaseLib settings instead of the cfg allow-list,
+  seeded from the 0.3.x pack choices. **Done in code (2026-11-20), not yet
+  seen in game:** check the Card packs section renders and saves with BaseLib
+  3.4.x.
 - A packaging script that assembles the mod folder from this repo's build plus
   pack folders produced by the art repo, and a release checklist. It must ship
   the DLL as `full_art_spire.dll` (the build output is `FullArtSpire.dll`), the
-  shaders under `shaders/`, and the cfg as `full_art_spire.cfg`.
+  shaders under `shaders/`. No pack cfg any more: every pack in `packs/`
+  loads unless switched off.
 - Python tooling tests on hosted CI (the DLL build stays local: it needs the
   game's DLLs).
 
@@ -29,7 +33,7 @@
 - In-game exporter: dump every loaded card's `runtime_model`, character/pool,
   source mod and portrait PNG (extends `CardReports`).
 - `tools/` CLI: `init`, `validate`, `build` for v2 packs, plus a JSON schema.
-  The validator must understand `gpu-textures.audit`: the v1 validator reports
+  The validator must understand v2 `pack.json` and `gpu-textures.audit`: the v1 validator reports
   cards shipped only as DDS variants in the installed 0.3.4 release (e.g. three
   colorless cards) as missing art, although the runtime accepts them.
 - Pack-author guide.

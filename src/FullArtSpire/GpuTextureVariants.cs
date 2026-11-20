@@ -21,45 +21,59 @@ internal static class GpuTextureVariants
         ["BC7_UNORM"] = Image.Format.BptcRgba,
     };
 
-    internal static void Load()
+    // Each pack root may carry its own gpu-textures.audit; its paths resolve inside
+    // that root. A bad index disables only its own root's variants.
+    internal static void Load(IReadOnlyList<string> roots)
     {
         var bindings = new Dictionary<string, Binding>(StringComparer.OrdinalIgnoreCase);
         _s3tc = RenderingServer.HasOsFeature("s3tc");
         _bptc = RenderingServer.HasOsFeature("bptc");
-        if (FullArtPackRegistry.TryResolveModPath("gpu-textures.audit", out string index) && File.Exists(index))
+        foreach (string root in roots)
         {
+            if (!PackPaths.TryResolveUnder(root, "gpu-textures.audit", out string index) || !File.Exists(index))
+                continue;
             try
             {
-                using var document = JsonDocument.Parse(File.ReadAllText(index));
-                if (document.RootElement.GetProperty("schema_version").GetInt32() is not (1 or 2))
-                    throw new InvalidDataException("Unsupported GPU texture index.");
-                foreach (var row in document.RootElement.GetProperty("textures").EnumerateArray())
-                {
-                    if (!Formats.TryGetValue(row.GetProperty("format").GetString() ?? "", out Image.Format format)) continue;
-                    if (!FullArtPackRegistry.TryResolveModPath(row.GetProperty("source").GetString(), out string source)
-                        || !FullArtPackRegistry.TryResolveModPath(row.GetProperty("path").GetString(), out string path))
-                        throw new InvalidDataException("GPU texture path escapes the mod.");
-                    // Admit only art and layer color textures, never a permission/cutout mask.
-                    string relative = Path.GetRelativePath(FullArtPackRegistry.ModDirectory, source).Replace('\\', '/');
-                    if (!(relative.StartsWith("art/", StringComparison.Ordinal)
-                        || relative.StartsWith("layers/", StringComparison.Ordinal) && relative.EndsWith("/background.png", StringComparison.Ordinal)))
-                        throw new InvalidDataException("GPU variant is not an opaque art texture.");
-                    string sha = row.GetProperty("sha256").GetString()!;
-                    string sourceSha = row.GetProperty("source_sha256").GetString()!;
-                    if (sha.Length != 64 || sourceSha.Length != 64
-                        || !sha.All(Uri.IsHexDigit) || !sourceSha.All(Uri.IsHexDigit))
-                        throw new InvalidDataException("Invalid GPU texture hash.");
-                    bindings.Add(source, new(path, sha, sourceSha,
-                        row.GetProperty("width").GetInt32(), row.GetProperty("height").GetInt32(), format));
-                }
+                foreach (var (source, binding) in ReadIndex(root, index))
+                    bindings[source] = binding;
             }
             catch (Exception ex)
             {
-                bindings.Clear();
-                GD.PushWarning($"[FullArtSpire] GPU variants disabled: {ex.Message}");
+                GD.PushWarning($"[FullArtSpire] GPU variants disabled for {root}: {ex.Message}");
             }
         }
         _bindings = bindings;
+    }
+
+    private static List<(string Source, Binding Binding)> ReadIndex(string root, string index)
+    {
+        var rows = new List<(string, Binding)>();
+        var sources = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        using var document = JsonDocument.Parse(File.ReadAllText(index));
+        if (document.RootElement.GetProperty("schema_version").GetInt32() is not (1 or 2))
+            throw new InvalidDataException("Unsupported GPU texture index.");
+        foreach (var row in document.RootElement.GetProperty("textures").EnumerateArray())
+        {
+            if (!Formats.TryGetValue(row.GetProperty("format").GetString() ?? "", out Image.Format format)) continue;
+            if (!PackPaths.TryResolveUnder(root, row.GetProperty("source").GetString(), out string source)
+                || !PackPaths.TryResolveUnder(root, row.GetProperty("path").GetString(), out string path))
+                throw new InvalidDataException("GPU texture path escapes its pack.");
+            // Admit only art and layer color textures, never a permission/cutout mask.
+            string relative = Path.GetRelativePath(root, source).Replace('\\', '/');
+            if (!(relative.StartsWith("art/", StringComparison.Ordinal)
+                || relative.StartsWith("layers/", StringComparison.Ordinal) && relative.EndsWith("/background.png", StringComparison.Ordinal)))
+                throw new InvalidDataException("GPU variant is not an opaque art texture.");
+            string sha = row.GetProperty("sha256").GetString()!;
+            string sourceSha = row.GetProperty("source_sha256").GetString()!;
+            if (sha.Length != 64 || sourceSha.Length != 64
+                || !sha.All(Uri.IsHexDigit) || !sourceSha.All(Uri.IsHexDigit))
+                throw new InvalidDataException("Invalid GPU texture hash.");
+            if (!sources.Add(source))
+                throw new InvalidDataException("Duplicate GPU texture source.");
+            rows.Add((source, new(path, sha, sourceSha,
+                row.GetProperty("width").GetInt32(), row.GetProperty("height").GetInt32(), format)));
+        }
+        return rows;
     }
 
     /// <summary>True when a compressed variant stands in for this source path.</summary>

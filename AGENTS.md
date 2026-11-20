@@ -35,5 +35,5 @@ The build needs an installed game (see `src/Sts2PathDiscovery.props`).
 ## Docs
 
 - `docs/architecture.md` — how the runtime works
-- `docs/pack-format.md` — v1 (implemented) and v2 (draft)
+- `docs/pack-format.md` — v1 (still read) and v2 (implemented)
 - `docs/roadmap.md` — phases and open decisions

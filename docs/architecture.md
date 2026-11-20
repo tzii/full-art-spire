@@ -30,8 +30,10 @@ Fixed names (mod id, cfg and settings file names, user-data folder, and their
 - **Pack choices:** on each such launch, the old folder's
   `full_art_card_packs.cfg` allow-list is turned into the packs that folder
   shipped but the player had not enabled, saved to
-  `user://full_art_spire/legacy-pack-selection.json`. Once active, the registry
-  keeps those packs off. Packs the old mod never had stay on. The old global
+  `user://full_art_spire/legacy-pack-selection.json`. On the first active
+  launch those pools are switched off as `megacrit.<pool>` and
+  `LegacyPackSelectionImported` is set, so this happens once. Packs the old
+  mod never had stay on. The old global
   `"enabled": false` is recorded but not carried over. A player who deletes the
   old folder before ever starting 0.4.0 keeps every pack on.
 - **Settings:** before BaseLib reads its settings, `user://mod_configs/
@@ -39,21 +41,26 @@ Fixed names (mod id, cfg and settings file names, user-data folder, and their
   exist yet. Property names are unchanged, so BaseLib reads the copy as its
   own. The old file is left in place.
 
-## Pack loading — `FullArtPackRegistry`
+## Pack loading — `PackDiscovery`, `FullArtPackRegistry`
 
-- Reads `full_art_spire.cfg` (JSON) from the mod folder. `enabled_packs`
-  is an explicit allow-list; a missing or unreadable cfg falls back to `silent`.
-  Packs switched off in a 0.3.x install are then removed (see Migration).
-- For each listed pool, reads `packs/<pool>.pack` and indexes cards by
-  `runtime_model` (case-insensitive). A later pool overwrites an earlier one
-  for the same model.
-- All paths are relative and must resolve inside the mod folder.
+- `PackDiscovery.Discover` finds v1 and v2 packs in this mod's `packs/`, in
+  every other loaded (or still to load) mod's `full_art/`, and in the player's
+  `user://full_art_spire/packs/` (see `pack-format.md`). It checks `requires`
+  and `min_game_version`, and drops duplicate ids. It makes no Godot calls, so
+  it runs in unit tests.
+- `FullArtPackRegistry.Plan` applies the packs that are on, in conflict order,
+  and indexes cards by `runtime_model` (case-insensitive).
+- **Path roots:** card paths stay relative. Each pack gets a root index (0 is
+  this mod's folder, which v1 packs use), and its card paths are rewritten to
+  `@<index>/<path>`. `TryResolveModPath` maps the prefix back to that root and
+  refuses anything outside it; unprefixed paths (shaders, the GPU index)
+  resolve in the mod folder. Every manifest path is prefixed, so a manifest
+  cannot forge a prefix into another pack's root. `PackPaths` holds this logic.
+- `GpuTextureVariants` reads a `gpu-textures.audit` from each pack root.
 - `HasReplacement(model)` is true when the entry exists, is not
   `preserve_original_layout`, and its art file (or a GPU variant) exists.
-
-This is the main limit for other mods' characters: packs can only come from this
-mod's own folder and must be named in its cfg. See `pack-format.md` for the v2
-discovery design.
+- Mods later in the load order have not loaded when this one initialises, so
+  their packs are found from the game's mod list before those mods load.
 
 ## Card hooks — `CardVisualPatches`
 
@@ -85,16 +92,24 @@ All user settings are BaseLib `SimpleModConfig` properties in
 `FullArtModConfig` (layers, depth, parallax, effects, finish assignment,
 Reduced Motion, background loading, GPU textures, card reports).
 
+Pack switches: `FullArtModConfig` overrides `SetupConfigUI` to add a **Card
+packs** section after the generated options. Each switch is BaseLib's own
+`NConfigTickbox` bound to a `PackToggleProperty`, a synthetic bool
+`PropertyInfo` that reads and writes the hidden `DisabledPacks` setting
+(comma-separated ids). BaseLib saves it on change. The registry reads it at
+startup only, so changes apply after a restart.
+
 ## Diagnostics
 
-`CardReports`: a hotkey appends the hovered card's model, pack entry, layers
+`CardReports`: a hotkey appends the hovered card's model, pack id, pack entry, layers
 and current settings to `user://full_art_spire/card-reports.jsonl`. It is
 the natural base for an exporter of every loaded card (roadmap phase 2).
 
 ## Tests
 
 `src/FullArtSpire.Tests` is a console runner (`Program.cs`) covering the
-background loader, legacy-mod migration, game API shape (`GameApiTests`,
+background loader, legacy-mod migration, pack discovery and path roots,
+game API shape (`GameApiTests`,
 checks the patched members exist in the installed game), layer policy, LRU cache
 and rarity spoofing.
 Native rendering tests that need prepared artwork stay in the art repository.

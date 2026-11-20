@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using BaseLib.Config;
 using Godot;
 using HarmonyLib;
+using MegaCrit.Sts2.Core.Debug;
 using MegaCrit.Sts2.Core.Modding;
 
 namespace FullArtSpire;
@@ -43,13 +44,15 @@ public static class MainFile
             {
                 GD.Print($"[{ModId}] Config registered successfully with visible settings.");
             }
+
+            ImportLegacyPackSelection(modConfig);
         }
         catch (Exception ex)
         {
             GD.PrintErr($"[{ModId}] Failed to register config: {ex}");
         }
 
-        FullArtPackRegistry.Load();
+        FullArtPackRegistry.Load(OtherInstalledMods(), GameVersion());
         CardReports.Initialize();
 
         GD.Print($"[{ModId}] BaseLib effect settings: enabled={FullArtModConfig.EnableEffects}, intensity={FullArtModConfig.EffectIntensity}, rareFirst={FullArtModConfig.RareFirstEffects}, gridMotion={FullArtModConfig.GridMotion}, focusedMotion={FullArtModConfig.FocusedMotion}");
@@ -127,6 +130,63 @@ public static class MainFile
         catch (Exception ex)
         {
             GD.PushWarning($"[{ModId}] Could not record the {ModIdentity.LegacyModId} pack selection: {ex.Message}");
+        }
+    }
+
+    // Copies the packs a 0.3.x player had switched off into the pack switches, once.
+    private static void ImportLegacyPackSelection(FullArtModConfig modConfig)
+    {
+        if (FullArtModConfig.LegacyPackSelectionImported)
+        {
+            return;
+        }
+
+        LegacyPackSelection? selection = LegacyMigration.LoadPackSelection(FullArtPackRegistry.ImportedPackSelectionPath());
+        string[] disabled = LegacyMigration.DisabledPackIds(selection).ToArray();
+        foreach (string id in disabled)
+        {
+            FullArtModConfig.SetPackEnabled(id, false);
+        }
+
+        FullArtModConfig.LegacyPackSelectionImported = true;
+        modConfig.Save();
+        if (disabled.Length > 0)
+        {
+            GD.Print($"[{ModId}] Kept off the packs switched off in {ModIdentity.LegacyDisplayName}: {string.Join(", ", disabled)}");
+        }
+    }
+
+    // Packs may live in any mod that is loaded or still to load this session.
+    // Mods after this one in the load order have not loaded yet, so the state
+    // filter matches FindActiveLegacyMod.
+    private static IReadOnlyList<InstalledMod> OtherInstalledMods()
+    {
+        try
+        {
+            return ModManager.Mods
+                .Where(mod => mod.manifest?.id is { Length: > 0 } id && id != ModId
+                    && mod.state is ModLoadState.None or ModLoadState.Loaded
+                    && !string.IsNullOrEmpty(mod.path))
+                .Select(mod => new InstalledMod(mod.manifest!.id!, mod.manifest.version, mod.path))
+                .ToArray();
+        }
+        catch (Exception ex)
+        {
+            GD.PushWarning($"[{ModId}] Could not list other mods; only bundled and player packs load: {ex.Message}");
+            return Array.Empty<InstalledMod>();
+        }
+    }
+
+    private static SemanticVersion? GameVersion()
+    {
+        try
+        {
+            return ReleaseInfoManager.Instance.SemVer;
+        }
+        catch (Exception ex)
+        {
+            GD.PushWarning($"[{ModId}] Could not read the game version; min_game_version is not checked: {ex.Message}");
+            return null;
         }
     }
 
