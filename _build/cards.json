@@ -1,0 +1,153 @@
+{
+  "hero": {
+    "pool": "event",
+    "name": "apparition",
+    "subtitle": "Event · Ancient · Full Prismatic"
+  },
+  "before_after": [
+    {
+      "id": "ba-1",
+      "pool": "ironclad",
+      "name": "crimson_mantle",
+      "note": "Extended sky and soaring flame trail above the original portrait"
+    },
+    {
+      "id": "ba-2",
+      "pool": "necrobinder",
+      "name": "seance",
+      "note": "Spectral fire rising into the cavern ceiling beyond the original crop"
+    },
+    {
+      "id": "ba-3",
+      "pool": "fool",
+      "name": "brighten_up",
+      "note": "Public beta Fool card extended upward into the full vertical frame"
+    }
+  ],
+  "depth": [
+    {
+      "id": "depth-1",
+      "pool": "regent",
+      "name": "void_form",
+      "note": "Starry figure separated from its constellation backdrop"
+    },
+    {
+      "id": "depth-2",
+      "pool": "defect",
+      "name": "quadcast",
+      "note": "Orb-casting silhouette floating over the swirling plasma vortex"
+    }
+  ],
+  "finishes": [
+    {
+      "id": "common",
+      "tier": "Common",
+      "finish_label": "Silver satin",
+      "finish_desc": "Subtle metallic sheen that catches the light across starters and commons.",
+      "pool": "regent",
+      "name": "cloak_of_stars"
+    },
+    {
+      "id": "uncommon",
+      "tier": "Uncommon",
+      "finish_label": "Pearl holo",
+      "finish_desc": "Soft iridescent sweep with delicate edge glints.",
+      "pool": "defect",
+      "name": "darkness"
+    },
+    {
+      "id": "rare",
+      "tier": "Rare",
+      "finish_label": "Gold foil, glints & aura",
+      "finish_desc": "Warm gold foil, star glints, backdrop dust and a glowing subject aura.",
+      "pool": "fool",
+      "name": "florescence"
+    },
+    {
+      "id": "ancient",
+      "tier": "Ancient",
+      "finish_label": "Full prismatic & rainbow aura",
+      "finish_desc": "Full-spectrum prismatic sheen, dense sparkle and a shifting rainbow aura.",
+      "pool": "silent",
+      "name": "wraith_form"
+    }
+  ],
+  "fool": [
+    "divine_shot",
+    "lost_lute",
+    "mythic_form",
+    "show_off",
+    "lullaby",
+    "ecstasy",
+    "sky_shot",
+    "cho_barbs"
+  ],
+  "gallery": {
+    "ironclad": [
+      "break",
+      "corruption",
+      "demon_form",
+      "impervious",
+      "conflagration",
+      "burning_pact"
+    ],
+    "silent": [
+      "wraith_form",
+      "suppress",
+      "afterimage",
+      "fan_of_knives",
+      "grand_finale",
+      "serpent_form"
+    ],
+    "defect": [
+      "biased_cognition",
+      "quadcast",
+      "echo_form",
+      "creative_ai",
+      "genetic_algorithm",
+      "glacier"
+    ],
+    "necrobinder": [
+      "protector",
+      "forbidden_grimoire",
+      "reaper_form",
+      "end_of_days",
+      "necro_mastery",
+      "countdown"
+    ],
+    "regent": [
+      "the_sealed_throne",
+      "meteor_shower",
+      "void_form",
+      "neutron_aegis",
+      "sword_sage",
+      "furnace"
+    ],
+    "colorless": [
+      "entropy",
+      "hand_of_greed",
+      "master_of_strategy",
+      "mayhem",
+      "eternal_armor",
+      "dramatic_entrance"
+    ],
+    "event": [
+      "apotheosis",
+      "apparition",
+      "enlightenment",
+      "metamorphosis"
+    ],
+    "curse": [
+      "ascenders_bane",
+      "curse_of_the_bell",
+      "enthralled",
+      "poor_sleep"
+    ],
+    "token": [
+      "sovereign_blade",
+      "soul",
+      "shiv",
+      "luminesce"
+    ]
+  }
+}
