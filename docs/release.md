@@ -29,7 +29,7 @@ Optionally check real packs with the runtime's own discovery:
 ## 3. Package
 
 ```bash
-python tools/package_mod.py --build --zip \
+python tools/package_mod.py --build --zip --optimize-png \
   --pack-source <art repo release folder> [--pack-source <more>] \
   --output dist/<version>
 ```
@@ -42,6 +42,16 @@ python tools/package_mod.py --build --zip \
   same name; conflicting files fail the build.
 - The DLL ships as `full_art_spire.dll` (the build output is
   `FullArtSpire.dll`), shaders under `shaders/`. There is no pack cfg.
+- `--optimize-png` (needs Pillow) re-encodes every 8-bit PNG outside v2 packs
+  losslessly and keeps the result only when it is smaller and decodes to the
+  same pixels. Only files made of bare image data qualify: 16-bit files and
+  files with colour chunks (gAMA, iCCP, sRGB, tRNS) or metadata keep their
+  bytes. That includes the OpenAI C2PA Content Credentials (`caBX`) on most
+  generated art and backgrounds, which a re-encode would strip or invalidate. `png-reencode.audit` maps each rewritten file to the
+  hash it had before, so the art repo's recorded hashes (effect audits,
+  `layer_audit`) still check out; the validator reads it, and packaging an
+  optimized folder again carries it over. The art repo's own files are never
+  touched, even with `--hardlink`.
 - `dist/` is ignored by git. The script refuses to write into a game install.
 
 Then validate the result; warnings are worth reading, issues block the release:

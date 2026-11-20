@@ -4,9 +4,9 @@ name: tools
 on:
   push:
     branches: [main]
-    paths: ["tools/**", "mod/**", "src/FullArtSpire/Shaders/**", "CHANGELOG.md", ".github/workflows/tools.yml"]
+    paths: ["tools/**", "mod/**", "src/FullArtSpire/Shaders/**", "CHANGELOG.md", "docs/pack.schema.json", ".github/workflows/tools.yml"]
   pull_request:
-    paths: ["tools/**", "mod/**", "src/FullArtSpire/Shaders/**", "CHANGELOG.md", ".github/workflows/tools.yml"]
+    paths: ["tools/**", "mod/**", "src/FullArtSpire/Shaders/**", "CHANGELOG.md", "docs/pack.schema.json", ".github/workflows/tools.yml"]
 
 permissions:
   contents: read
@@ -19,4 +19,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      # Optional for the tools; installed so the image and schema tests run too.
+      - run: python -m pip install --disable-pip-version-check pillow jsonschema
       - run: python -m unittest discover -s tools/tests -v

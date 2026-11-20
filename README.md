@@ -25,7 +25,7 @@ FullArtSpire.sln              solution for both projects
 src/FullArtSpire/             runtime mod (C#, Harmony, Godot shaders)
 src/FullArtSpire.Tests/       unit tests (custom runner; needs the game's DLLs)
 src/Sts2PathDiscovery.props   finds the Slay the Spire 2 install for builds
-tools/package_mod.py          assembles the mod folder and zip (stdlib Python)
+tools/package_mod.py          assembles the mod folder and zip (stdlib Python; Pillow for --optimize-png)
 tools/validate_pack.py        pack and mod folder validator (stdlib Python)
 tools/tests/                  tests for the Python tools
 mod/                          mod manifest shipped next to the DLL
@@ -50,7 +50,7 @@ To assemble the mod folder from the build and the art repository's packs, see
 [docs/release.md](docs/release.md):
 
 ```bash
-python tools/package_mod.py --build --zip --pack-source <art release folder> --output dist/<version>
+python tools/package_mod.py --build --zip --optimize-png --pack-source <art release folder> --output dist/<version>
 ```
 
 The validator takes one of:

@@ -14,6 +14,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import validate_pack  # noqa: E402
 
+try:
+    from PIL import Image
+except ImportError:  # Mask and art content checks need Pillow.
+    Image = None
+
 WHIP = "MegaCrit.Sts2.Core.Models.Cards.KiWhip"
 LANTERN = "SomeMod.Cards.Lantern"
 
@@ -256,6 +261,44 @@ class ValidatorTests(unittest.TestCase):
         self.assertEqual(1, run_cli(["--pack", str(pack)]), "art is missing without a variant")
         self.gpu(mod, "art/ki_whip.png")
         self.assertEqual(0, run_cli(["--pack", str(pack)]))
+
+    @unittest.skipIf(Image is None, "Pillow is not installed")
+    def test_v1_hashes_follow_lossless_reencodes(self) -> None:
+        def encode(image, level: int) -> bytes:
+            buffer = io.BytesIO()
+            image.save(buffer, "PNG", compress_level=level)
+            return buffer.getvalue()
+
+        def sha(data: bytes) -> str:
+            return hashlib.sha256(data).hexdigest()
+
+        mod = self.root / "mod"
+        gradient = Image.linear_gradient("L")  # 256x256; half the rows are >= 128.
+        audited = {"art/ki_whip.png": encode(gradient.convert("RGB"), 0), "effects/ki_whip_effect.png": encode(gradient, 0)}
+        shipped = {"art/ki_whip.png": encode(gradient.convert("RGB"), 9), "effects/ki_whip_effect.png": encode(gradient, 9)}
+        for relative, data in shipped.items():
+            write(mod / relative, data)
+        card = v1_card(WHIP, "ki_whip")
+        mask = "effects/ki_whip_effect.png"
+        card["effects"].update(surface="foil", effect_mask=mask, permission_mask=mask, audit={
+            "review_status": "approved", "automated_status": "approved", "permitted_coverage": 0.5,
+            "dimensions": [256, 256], "effect_mask_sha256": sha(audited[mask]),
+            "permission_mask_sha256": sha(audited[mask]), "final_art_sha256": sha(audited["art/ki_whip.png"])})
+        pack = write_json(mod / "packs" / "colorless.pack", {"format": "sts2_full_art_standalone_pack", "version": 1,
+                                                             "pool": "colorless", "card_count": 1, "cards": [card]})
+        issues = validate_pack.validate_pack(json.loads(pack.read_text()), None, mod, False, False)[0]
+        self.assertEqual(3, len([issue for issue in issues if "does not match" in issue]), issues)
+
+        rows = [{"path": relative, "sha256": sha(shipped[relative]), "source_sha256": sha(audited[relative])}
+                for relative in shipped]
+        write_json(mod / "png-reencode.audit", {"schema_version": 1, "files": rows})
+        issues = validate_pack.validate_pack(json.loads(pack.read_text()), None, mod, False, False)[0]
+        self.assertEqual([], issues)
+        self.assertEqual(0, run_cli(["--mod-folder", str(mod)]))
+        rows[0]["source_sha256"] = "0" * 64
+        write_json(mod / "png-reencode.audit", {"schema_version": 1, "files": rows})
+        issues = validate_pack.validate_pack(json.loads(pack.read_text()), None, mod, False, False)[0]
+        self.assertTrue(any("final_art_sha256 does not match" in issue for issue in issues), issues)
 
 
 if __name__ == "__main__":

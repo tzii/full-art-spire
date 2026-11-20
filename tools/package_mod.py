@@ -15,12 +15,21 @@ of all sources are merged into one. When two sources supply the same pack
 (same packs/ entry name), the later --pack-source wins. Two packs that need the
 same path with different bytes are an error.
 
-Never writes into a game install. Standard library only.
+With --optimize-png every 8-bit PNG outside v2 packs that holds only image data
+(no metadata or colour chunks) is re-encoded losslessly (Pillow, optimize=True)
+and kept only if it is smaller and decodes to identical pixels.
+png-reencode.audit records each rewritten file's new and original hash, so the
+art repository's recorded hashes stay checkable (validate_pack.py reads it);
+it is carried over when an optimized mod folder is packaged again.
+
+Never writes into a game install. Standard library only, apart from Pillow for
+--optimize-png.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import os
 import re
@@ -28,6 +37,7 @@ import shutil
 import subprocess
 import sys
 import zipfile
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 
@@ -39,6 +49,13 @@ SHADERS = REPO / "src" / "FullArtSpire" / "Shaders"
 MANIFEST = REPO / "mod" / f"{MOD_ID}.json"
 CHANGELOG = REPO / "CHANGELOG.md"
 AUDIT = "gpu-textures.audit"
+REENCODE_AUDIT = "png-reencode.audit"
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+# Only bare image data is re-encoded. A file with any other chunk keeps its
+# bytes: colour chunks (gAMA, iCCP, sRGB, tRNS) change how the game decodes it,
+# and a re-encode would drop metadata such as text, XMP or signed C2PA Content
+# Credentials (caBX), or invalidate the credentials' hash of the file.
+PLAIN_PNG_CHUNKS = frozenset({b"IHDR", b"IDAT", b"IEND"})
 V2_FORMAT = "full_art_pack"
 V2_VERSION = 2
 POOL_RE = re.compile(r"^[a-z0-9_]+$")
@@ -119,6 +136,22 @@ class Audit:
         return audit
 
 
+def read_reencode_audit(root: Path) -> dict[str, dict]:
+    """<root>/png-reencode.audit as path -> row; empty when there is none."""
+    path = root / REENCODE_AUDIT
+    if not path.is_file():
+        return {}
+    data = read_json(path)
+    if not isinstance(data, dict) or data.get("schema_version") != 1 or not isinstance(data.get("files"), list):
+        raise PackageError(f"{path}: unsupported format")
+    rows = {}
+    for row in data["files"]:
+        if not isinstance(row, dict) or not all(isinstance(row.get(key), str) for key in ("sha256", "source_sha256")):
+            raise PackageError(f"{path}: a row needs path, sha256 and source_sha256")
+        rows[safe_relative(row.get("path"), f"{path} path")] = row
+    return rows
+
+
 @dataclass
 class Pack:
     key: str            # entry name under packs/: "<pool>.pack" or "<folder>"
@@ -131,9 +164,10 @@ class Pack:
     audit_rows: dict[str, dict]      # v1 only: rows for the mod-root audit
     audit_schema: int = 0
     audit_formats: frozenset[str] = frozenset()
+    reencoded: dict[str, dict] = field(default_factory=dict)  # v1 only: carried png-reencode.audit rows
 
 
-def collect_v1(source: Path, pack_file: Path, audit: Audit) -> Pack:
+def collect_v1(source: Path, pack_file: Path, audit: Audit, reencoded: dict[str, dict]) -> Pack:
     pool = pack_file.stem
     if not POOL_RE.match(pool):
         raise PackageError(f"{pack_file}: invalid pool name")
@@ -163,7 +197,8 @@ def collect_v1(source: Path, pack_file: Path, audit: Audit) -> Pack:
         if not variant.is_file():
             raise PackageError(f"{pack_file}: GPU variant missing: {row['path']}")
     return Pack(f"{pool}.pack", "v1", f"megacrit.{pool}", source, pack_file, len(cards), files, rows,
-                audit.schema_version, frozenset(audit.formats))
+                audit.schema_version, frozenset(audit.formats),
+                {relative: reencoded[relative] for relative in files if relative in reencoded})
 
 
 def collect_v2(folder: Path, key: str) -> Pack:
@@ -206,7 +241,8 @@ def collect_source(source: Path) -> list[Pack]:
     if not packs_dir.is_dir():
         raise PackageError(f"{source}: neither pack.json nor a packs/ folder")
     audit = Audit.read(source)
-    packs = [collect_v1(source, path, audit) for path in sorted(packs_dir.glob("*.pack"))]
+    reencoded = read_reencode_audit(source)
+    packs = [collect_v1(source, path, audit, reencoded) for path in sorted(packs_dir.glob("*.pack"))]
     for folder in sorted(path for path in packs_dir.iterdir() if path.is_dir()):
         if (folder / "pack.json").is_file():
             if not POOL_RE.match(folder.name):
@@ -252,7 +288,88 @@ def place(files: dict[str, Path], relative: str, source: Path, owner: str, owner
         owners[relative] = owner
 
 
-def assemble(sources: list[Path], dll: Path, version: str | None, output: Path, hardlink: bool) -> dict:
+def png_header(data: bytes) -> tuple[int, int, int, int, frozenset[bytes]] | None:
+    """(width, height, bit depth, colour type, chunk types) of a PNG, or None if it is not one."""
+    if not data.startswith(PNG_SIGNATURE):
+        return None
+    header, chunks, position = None, set(), len(PNG_SIGNATURE)
+    while position + 8 <= len(data):
+        length = int.from_bytes(data[position:position + 4], "big")
+        kind = data[position + 4:position + 8]
+        if kind == b"IHDR" and length >= 13:
+            body = data[position + 8:position + 21]
+            header = (int.from_bytes(body[0:4], "big"), int.from_bytes(body[4:8], "big"), body[8], body[9])
+        chunks.add(kind)
+        position += 12 + length
+        if kind == b"IEND":
+            break
+    return None if header is None else (*header, frozenset(chunks))
+
+
+def reencode_png(path: str) -> tuple[str, int, int] | None:
+    """Re-encodes one staged PNG losslessly if that makes it smaller.
+
+    Returns (original sha256, original size, new size), or None when the file
+    keeps its bytes. Only 8-bit grey, RGB and their alpha forms made of nothing
+    but PLAIN_PNG_CHUNKS qualify: Pillow reads 16-bit RGB as 8-bit, and other
+    chunks carry colour information or metadata a re-encode would lose.
+    """
+    from PIL import Image
+
+    target = Path(path)
+    data = target.read_bytes()
+    header = png_header(data)
+    if header is None or header[2] != 8 or header[3] not in (0, 2, 4, 6) or not header[4] <= PLAIN_PNG_CHUNKS:
+        return None
+    with Image.open(io.BytesIO(data)) as image:
+        image.load()
+        mode, size, pixels = image.mode, image.size, image.tobytes()
+        buffer = io.BytesIO()
+        image.save(buffer, "PNG", optimize=True)
+    encoded = buffer.getvalue()
+    if len(encoded) >= len(data):
+        return None
+    with Image.open(io.BytesIO(encoded)) as check:
+        check.load()
+        identical = (check.mode, check.size) == (mode, size) and check.tobytes() == pixels
+    new_header = png_header(encoded)
+    if not identical or new_header is None or new_header[:4] != header[:4]:
+        raise PackageError(f"{path}: re-encoding would change the image")
+    temporary = target.with_name(target.name + ".tmp")
+    temporary.write_bytes(encoded)
+    os.replace(temporary, target)  # Replaces a hard link rather than writing through it.
+    return hashlib.sha256(data).hexdigest(), len(data), len(encoded)
+
+
+def optimize_pngs(stage: Path, skip: set[str], carried: dict[str, dict]) -> tuple[dict[str, dict], int]:
+    """Re-encodes the stage's PNGs; returns the audit rows for every rewritten file and the bytes saved."""
+    try:
+        import PIL  # noqa: F401
+    except ImportError as error:
+        raise PackageError("--optimize-png needs Pillow (pip install pillow)") from error
+    # v2 packs ship as their authors made them; their own GPU audits pin their PNGs' hashes.
+    pngs = sorted(relative for relative in (path.relative_to(stage).as_posix() for path in stage.rglob("*.png"))
+                  if relative not in skip and not relative.startswith("packs/"))
+    paths = [str(stage / relative) for relative in pngs]
+    if len(paths) < 8:
+        results = list(map(reencode_png, paths))
+    else:
+        with ProcessPoolExecutor(max_workers=min(os.cpu_count() or 1, 32)) as pool:
+            results = list(pool.map(reencode_png, paths, chunksize=4))
+    rows, saved = dict(carried), 0
+    for relative, result in zip(pngs, results):
+        if result is None:
+            continue
+        original, before, after = result
+        saved += before - after
+        # A file optimized by an earlier package keeps the hash it had before any re-encode.
+        source = carried[relative]["source_sha256"] if relative in carried else original
+        rows[relative] = {"path": relative, "sha256": sha256(stage / relative), "source_sha256": source}
+    return rows, saved
+
+
+def assemble(sources: list[Path], dll: Path, version: str | None, output: Path, hardlink: bool,
+             optimize_png: bool = False) -> dict:
     guard_output(output)
     check_dll(dll)
     chosen: dict[str, Pack] = {}
@@ -270,6 +387,7 @@ def assemble(sources: list[Path], dll: Path, version: str | None, output: Path, 
     files: dict[str, Path] = {}
     owners: dict[str, str] = {}
     rows: dict[str, dict] = {}
+    carried: dict[str, dict] = {}
     schema = 0
     formats: set[str] = set()
     for pack in sorted(chosen.values(), key=lambda item: item.key):
@@ -282,6 +400,7 @@ def assemble(sources: list[Path], dll: Path, version: str | None, output: Path, 
         if pack.audit_rows:
             schema = max(schema, pack.audit_schema)
             formats |= pack.audit_formats
+        carried.update(pack.reencoded)
 
     manifest = read_json(MANIFEST)
     if manifest.get("id") != MOD_ID:
@@ -309,6 +428,18 @@ def assemble(sources: list[Path], dll: Path, version: str | None, output: Path, 
         audit = {"schema_version": schema, "formats": sorted(formats),
                  "textures": [rows[key] for key in sorted(rows)]}
         (stage / AUDIT).write_text(json.dumps(audit, indent=2) + "\n", encoding="utf-8", newline="\n")
+    # Rows describe the bytes they were written for; drop any a replaced file no longer matches.
+    carried = {relative: row for relative, row in carried.items()
+               if relative in files and sha256(stage / relative) == row["sha256"].lower()}
+    saved = 0
+    if optimize_png:
+        carried, saved = optimize_pngs(stage, set(rows), carried)
+    if carried:
+        listing = ",\n".join("  " + json.dumps(carried[key]) for key in sorted(carried))
+        (stage / REENCODE_AUDIT).write_text(
+            '{"schema_version": 1,\n "description": "PNGs re-encoded losslessly by tools/package_mod.py: decoded '
+            'pixels are identical; source_sha256 is the hash before any re-encode.",\n "files": [\n'
+            + listing + "\n]}\n", encoding="utf-8", newline="\n")
     shutil.copyfile(dll, stage / f"{MOD_ID}.dll")
     (stage / "shaders").mkdir()
     for shader in sorted(SHADERS.glob("*.gdshader")):
@@ -325,6 +456,8 @@ def assemble(sources: list[Path], dll: Path, version: str | None, output: Path, 
                   for pack in sorted(chosen.values(), key=lambda item: item.key)],
         "cards": sum(pack.cards for pack in chosen.values()),
         "gpu_variants": len(rows),
+        "reencoded_pngs": len(carried),
+        "reencode_saved_bytes": saved,
         "file_count": len(shipped),
         "installed_bytes": sum(path.stat().st_size for path in shipped),
         "files": {path.relative_to(stage).as_posix(): sha256(path) for path in shipped},
@@ -365,12 +498,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--version", help="override the manifest version")
     parser.add_argument("--zip", action="store_true", help="also write FullArtSpire-<version>.zip")
     parser.add_argument("--hardlink", action="store_true", help="hard-link pack files instead of copying, where possible")
+    parser.add_argument("--optimize-png", action="store_true",
+                        help="re-encode shipped PNGs losslessly, keeping identical pixels (needs Pillow)")
     args = parser.parse_args(argv)
     try:
         if args.build:
             subprocess.run(["dotnet", "build", str(REPO / "src" / "FullArtSpire"), "-c", "Release", "-nologo", "-v", "q"], check=True)
         output = args.output.resolve()
-        receipt = assemble(args.pack_source, args.dll.resolve(), args.version, output, args.hardlink)
+        receipt = assemble(args.pack_source, args.dll.resolve(), args.version, output, args.hardlink,
+                           args.optimize_png)
         if args.zip:
             archive = output / f"FullArtSpire-{receipt['version']}.zip"
             zip_folder(output / MOD_ID, archive)
@@ -382,6 +518,9 @@ def main(argv: list[str] | None = None) -> int:
     print(f"{receipt['mod_id']} {receipt['version']}: {len(receipt['packs'])} packs, {receipt['cards']} cards, "
           f"{receipt['gpu_variants']} GPU variants, {receipt['file_count']} files, "
           f"{receipt['installed_bytes'] / 1e9:.2f} GB -> {output / MOD_ID}")
+    if args.optimize_png:
+        print(f"re-encoded PNGs: {receipt['reencoded_pngs']} in {REENCODE_AUDIT}, "
+              f"{receipt['reencode_saved_bytes'] / 1e6:.0f} MB saved this run")
     if receipt["runtime"]["dirty"]:
         print("warning: built from a working tree with uncommitted changes", file=sys.stderr)
     return 0

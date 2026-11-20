@@ -54,12 +54,15 @@
 ## Phase 3 — art repo cleanup
 
 - Art repo builders emit v2 pack folders; stop committing release copies.
-- Losslessly re-encode release PNGs in the art repo builder, before it records
-  `layer_audit.packaged_sha256` and the effect audit hashes. Measured on the
-  0.3.4 packs (2026-11-20): Pillow `optimize=True` saves 20% on `art/` and 24%
-  on layer backgrounds with identical pixels, about 230 MB of the 1.09 GB of
-  PNGs. It cannot happen in `package_mod.py`: it would make those recorded
-  hashes false. Keep 16-bit PNGs as they are (Pillow reads them as 8-bit).
+- Lossless PNG re-encoding. **Done (2026-11-20)** as `package_mod.py
+  --optimize-png`, with `png-reencode.audit` keeping the art repo's recorded
+  hashes checkable. On the QA build it rewrote the 259 PNGs that hold only
+  image data: 8.5 MB saved (zip 1,129 → 1,120 MB). **Open decision:** 708 art
+  and background PNGs (1.0 GB) carry OpenAI's signed C2PA Content Credentials
+  (`caBX`), which record that the image is AI-generated. Re-encoding them
+  would save about 20% (roughly 200 MB) but strips or invalidates the
+  credentials, so they keep their bytes unless the maintainer decides
+  otherwise.
 - Remove the runtime from the art repo once this repo is the source of truth
   (its native rendering tests move or point here).
 

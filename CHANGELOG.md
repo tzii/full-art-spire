@@ -8,6 +8,7 @@
 - Every pack has its own switch in the mod's settings, under Card packs. Switching applies right away, including to cards already on screen. The `full_art_card_packs.cfg` pack list is no longer used.
 - A card whose pack is switched off gets the game's own portrait layout back.
 - Less work per frame for layered cards and finishes.
+- Smaller download: PNGs are compressed by type in the zip, and PNGs without metadata are re-encoded losslessly (identical pixels).
 - Your Full Art Card Packs settings are imported on first start. Packs you had switched off in `full_art_card_packs.cfg` stay off if the old folder was still installed when you first started 0.4.0.
 - A malformed pack (for example one with `"version": null`) is skipped with a log line instead of stopping every pack from loading.
 - For pack authors: `tools/validate_pack.py` checks the new pack format and whole mod folders, including art shipped only as compressed GPU textures. `docs/pack.schema.json` gives editors completion and inline errors for `pack.json`.

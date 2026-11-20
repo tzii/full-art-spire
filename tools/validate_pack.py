@@ -271,6 +271,23 @@ def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def recorded_hash_matches(path: Path, expected: Any, ctx: "Context | None") -> bool:
+    """True when the file has the recorded hash, or is a lossless re-encode (png-reencode.audit) of one that had it."""
+    if not isinstance(expected, str):
+        return False
+    actual = sha256_file(path)
+    if actual == expected:
+        return True
+    if ctx is None:
+        return False
+    try:
+        relative = path.resolve().relative_to(ctx.root.resolve()).as_posix()
+    except ValueError:
+        return False
+    row = ctx.reencoded.get(relative.lower())
+    return row is not None and row["sha256"] == actual and row["source_sha256"] == expected.lower()
+
+
 def validate_enabled_effect(
     label: str,
     effects: dict[str, Any],
@@ -280,6 +297,7 @@ def validate_enabled_effect(
     issues: list[str],
     warnings: list[str],
     art_source_sha256: str | None = None,
+    ctx: "Context | None" = None,
 ) -> int:
     missing_masks = 0
     audit = effects.get("audit")
@@ -331,8 +349,7 @@ def validate_enabled_effect(
             message = f"{label}: missing {field} {mask}"
             add_issue(warnings if allow_missing_masks else issues, message)
             continue
-        expected_hash = audit.get(f"{field}_sha256")
-        if not isinstance(expected_hash, str) or sha256_file(mask_path) != expected_hash:
+        if not recorded_hash_matches(mask_path, audit.get(f"{field}_sha256"), ctx):
             add_issue(issues, f"{label}: audit hash does not match {field} {mask}")
         try:
             from PIL import Image
@@ -370,8 +387,7 @@ def validate_enabled_effect(
                     )
 
     if release_art_path is not None and release_art_path.is_file():
-        expected_art_hash = audit.get("final_art_sha256")
-        if not isinstance(expected_art_hash, str) or sha256_file(release_art_path) != expected_art_hash:
+        if not recorded_hash_matches(release_art_path, audit.get("final_art_sha256"), ctx):
             add_issue(issues, f"{label}: audit final_art_sha256 does not match released art")
         try:
             from PIL import Image
@@ -485,6 +501,7 @@ def validate_card(
             issues,
             warnings,
             art_source_sha256,
+            ctx,
         )
 
     return missing_repo_final_art, missing_release_art, missing_masks
@@ -595,6 +612,7 @@ def format_count(label: str, count: int, allowed: bool = False) -> str:
 V2_FORMAT = "full_art_pack"
 V2_FORMAT_VERSION = 2
 GPU_AUDIT = "gpu-textures.audit"
+REENCODE_AUDIT = "png-reencode.audit"
 PACK_ID_RE = re.compile(r"^[a-z0-9_]+(\.[a-z0-9_]+)+$")
 POOL_NAME_RE = re.compile(r"^[a-z0-9_]+$")
 VERSION_RE = re.compile(r"^v?\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$")
@@ -787,6 +805,31 @@ def read_gpu_index(root: Path, issues: list[str], warnings: list[str]) -> GpuInd
     return GpuIndex(rows)
 
 
+def read_reencode_audit(root: Path, issues: list[str]) -> dict[str, dict[str, str]]:
+    """<root>/png-reencode.audit (written by package_mod.py --optimize-png) as lowercase path -> row."""
+    path = root / REENCODE_AUDIT
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError) as exc:
+        add_issue(issues, f"{REENCODE_AUDIT} cannot be read: {exc}")
+        return {}
+    files = data.get("files") if isinstance(data, dict) else None
+    if not isinstance(data, dict) or data.get("schema_version") != 1 or not isinstance(files, list):
+        add_issue(issues, f"{REENCODE_AUDIT} must have schema_version 1 and a files list")
+        return {}
+    rows: dict[str, dict[str, str]] = {}
+    for number, row in enumerate(files, start=1):
+        if (not isinstance(row, dict) or path_problem(row.get("path"))
+                or not all(isinstance(row.get(key), str) and SHA256_RE.fullmatch(row[key])
+                           for key in ("sha256", "source_sha256"))):
+            add_issue(issues, f"{REENCODE_AUDIT}: row #{number} needs a path, sha256 and source_sha256")
+            continue
+        rows[row["path"].lower()] = {"sha256": row["sha256"].lower(), "source_sha256": row["source_sha256"].lower()}
+    return rows
+
+
 class Context:
     """What one pack root shares across its cards: its files, its GPU index and which files cards use."""
 
@@ -796,6 +839,7 @@ class Context:
         self.issues: list[str] = []
         self.warnings: list[str] = []
         self.gpu = read_gpu_index(root, self.issues, self.warnings)
+        self.reencoded = read_reencode_audit(root, self.issues)
         self.used: set[str] = set()
         self.gpu_only_art = 0
         self._variants: dict[str, tuple[str | None, str | None]] = {}
@@ -851,7 +895,7 @@ class Context:
             relative = path.relative_to(self.root).as_posix()
             if folders is not None and relative.split("/")[0] not in folders:
                 continue
-            if relative.lower() in self.used or relative in ("pack.json", GPU_AUDIT):
+            if relative.lower() in self.used or relative in ("pack.json", GPU_AUDIT, REENCODE_AUDIT):
                 continue
             if path.suffix.lower() in (".md", ".txt") or path.name.upper().startswith(("LICENSE", "README")):
                 continue

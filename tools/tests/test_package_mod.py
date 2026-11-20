@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import sys
 import tempfile
@@ -11,6 +12,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import package_mod  # noqa: E402
+
+try:
+    from PIL import Image
+except ImportError:  # --optimize-png needs Pillow.
+    Image = None
 
 STRIKE = "MegaCrit.Sts2.Core.Models.Cards.StrikeIronclad"
 WHIP = "MegaCrit.Sts2.Core.Models.Cards.KiWhip"
@@ -191,6 +197,51 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(package_mod.ZIP_LEVEL, package_mod.zip_level("full_art_spire/gpu/x.dds"))
         info = package_mod.zip_entry("full_art_spire/art/x.png")
         self.assertEqual(package_mod.PNG_ZIP_LEVEL, getattr(info, "compress_level", getattr(info, "_compresslevel", None)))
+
+    @unittest.skipIf(Image is None, "Pillow is not installed")
+    def test_optimize_png_keeps_pixels_and_records_hashes(self) -> None:
+        def encode(image, **options) -> bytes:
+            buffer = io.BytesIO()
+            image.save(buffer, "PNG", compress_level=0, **options)
+            return buffer.getvalue()
+
+        def sha(data: bytes) -> str:
+            return hashlib.sha256(data).hexdigest()
+
+        gradient = Image.linear_gradient("L").resize((64, 96))
+        source = self.mod_source(art=encode(Image.merge("RGBA", (gradient, gradient.rotate(90), gradient, gradient))))
+        keyed = encode(gradient.convert("RGB"), transparency=(0, 0, 0))   # tRNS: a colour chunk
+        deep = encode(Image.new("I;16", (64, 96), 4000))                   # 16-bit
+        write(source / "effects" / "strike_permission.png", keyed)
+        write(source / "layers" / "strike" / "mask.png", deep)
+        original = (source / "art" / "strike.png").read_bytes()
+
+        receipt = package_mod.assemble([source], self.dll, None, self.output, True, True)
+        stage = self.output / "full_art_spire"
+        shipped = (stage / "art" / "strike.png").read_bytes()
+        self.assertLess(len(shipped), len(original))
+        self.assertEqual(original, (source / "art" / "strike.png").read_bytes(), "a hard-linked source is not written through")
+        with Image.open(io.BytesIO(original)) as before, Image.open(io.BytesIO(shipped)) as after:
+            self.assertEqual((before.mode, before.size, before.tobytes()), (after.mode, after.size, after.tobytes()))
+        self.assertEqual(keyed, (stage / "effects" / "strike_permission.png").read_bytes(), "colour chunks keep their bytes")
+        self.assertEqual(deep, (stage / "layers" / "strike" / "mask.png").read_bytes(), "16-bit PNGs keep their bytes")
+        audit = json.loads((stage / package_mod.REENCODE_AUDIT).read_text(encoding="utf-8"))
+        self.assertEqual([{"path": "art/strike.png", "sha256": sha(shipped), "source_sha256": sha(original)}], audit["files"])
+        self.assertEqual(1, receipt["reencoded_pngs"])
+        self.assertEqual(len(original) - len(shipped), receipt["reencode_saved_bytes"])
+
+        again = package_mod.assemble([stage], self.dll, None, self.root / "again", False, True)
+        audit = json.loads((self.root / "again" / "full_art_spire" / package_mod.REENCODE_AUDIT).read_text(encoding="utf-8"))
+        self.assertEqual(sha(original), audit["files"][0]["source_sha256"], "packaging again keeps the original hash")
+        self.assertEqual(1, again["reencoded_pngs"])
+
+    def test_carried_reencode_rows_need_matching_bytes(self) -> None:
+        source = self.mod_source()
+        write_json(source / package_mod.REENCODE_AUDIT, {"schema_version": 1, "files": [
+            {"path": "art/strike.png", "sha256": "0" * 64, "source_sha256": "1" * 64}]})
+        receipt = self.package(source)
+        self.assertEqual(0, receipt["reencoded_pngs"], "a row for different bytes is dropped")
+        self.assertFalse((self.output / "full_art_spire" / package_mod.REENCODE_AUDIT).exists())
 
 
 if __name__ == "__main__":
