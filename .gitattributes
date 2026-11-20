@@ -1,0 +1,7 @@
+# Store and check out text with LF on every platform so hashes and diffs match
+# between Windows and Linux checkouts.
+* text=auto eol=lf
+*.dll binary
+*.pck binary
+*.png binary
+*.dds binary
