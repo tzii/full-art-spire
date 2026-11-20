@@ -10,11 +10,17 @@
 ## Phase 1 — 0.4.0: packs from anywhere
 
 - Rename to Full Art Spire (`full_art_spire`) with old-mod detection and
-  settings import (see Decided).
+  settings import (see Decided). **Done in code (2026-11-20), not yet tried in
+  a game session:** test with the old mod installed, disabled and removed, and
+  check that BaseLib's main-menu popup shows the warning.
 - Pack format v2 and discovery (`pack-format.md`), still reading v1 `.pack`.
 - Per-pack toggles in the BaseLib settings instead of the cfg allow-list.
+  Seed them from `user://full_art_spire/legacy-pack-selection.json` (packs a
+  0.3.x player had switched off).
 - A packaging script that assembles the mod folder from this repo's build plus
-  pack folders produced by the art repo, and a release checklist.
+  pack folders produced by the art repo, and a release checklist. It must ship
+  the DLL as `full_art_spire.dll` (the build output is `FullArtSpire.dll`), the
+  shaders under `shaders/`, and the cfg as `full_art_spire.cfg`.
 - Python tooling tests on hosted CI (the DLL build stays local: it needs the
   game's DLLs).
 

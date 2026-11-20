@@ -25,8 +25,8 @@ gameplay, balance or card-data changes.
 ## Commands
 
 ```bash
-dotnet build src/FullArtCardPacks -c Release
-dotnet run --project src/FullArtCardPacks.Tests
+dotnet build src/FullArtSpire -c Release
+dotnet run --project src/FullArtSpire.Tests
 python tools/validate_pack.py --pack <pack> --release-root <mod-folder>
 ```
 

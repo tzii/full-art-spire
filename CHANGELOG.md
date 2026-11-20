@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0 - unreleased
+
+- Renamed to Full Art Spire (mod id `full_art_spire`). Delete the old `full_art_card_packs` folder after installing.
+- While the old mod is still installed and enabled, Full Art Spire stays inactive and shows a warning on the main menu, so the two never patch the same cards.
+- Your Full Art Card Packs settings are imported on first start. Packs you had switched off in `full_art_card_packs.cfg` stay off if the old folder was still installed when you first started 0.4.0.
+
 ## 0.3.4 - complete layered release candidate
 
 - Compressed textures must preserve full opacity as well as meeting the existing RGB quality limits. Textures that fail keep their original PNG, preventing affected cards from falling back to flat art.

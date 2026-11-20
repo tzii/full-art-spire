@@ -3,7 +3,7 @@
 ## v1 — implemented (0.3.x)
 
 Location: `<mod folder>/packs/<pool>.pack`, loaded only when `<pool>` appears in
-`full_art_card_packs.cfg`:
+`full_art_spire.cfg` (`full_art_card_packs.cfg` in 0.3.x):
 
 ```json
 { "enabled": true, "enabled_packs": ["ironclad", "silent", "fool"] }
