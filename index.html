@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Full Art Spire — Full-Art Cards for Slay the Spire 2</title>
   <meta name="description" content="Visual-only Slay the Spire 2 mod giving 667 cards full-art portraits, layered parallax depth and rarity finishes across 12 switchable packs, including the Fool.">
-  <meta name="theme-color" content="#090d16">
+  <meta name="theme-color" content="#fbf3e4" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#131110" media="(prefers-color-scheme: dark)">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="fonts/mona-sans.woff2" as="font" type="font/woff2" crossorigin>
 
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Full Art Spire">
@@ -16,195 +18,253 @@
   <meta property="og:image" content="https://tzii.github.io/full-art-spire/assets/og-card.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Full Art Spire showcase featuring full-art Slay the Spire 2 cards with layered depth and rarity finishes">
+  <meta property="og:image:alt" content="Full Art Spire: a fanned hand of full-art Slay the Spire 2 cards on a bright sunburst">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Full Art Spire — Full-Art Cards for Slay the Spire 2">
   <meta name="twitter:description" content="667 full-art cards with layered parallax depth and rarity finishes across 12 packs. Visual-only Slay the Spire 2 mod.">
   <meta name="twitter:image" content="https://tzii.github.io/full-art-spire/assets/og-card.jpg">
 
+  <script>
+    (function () {
+      var root = document.documentElement;
+      root.classList.add("js");
+      try {
+        var saved = localStorage.getItem("fas-theme");
+        if (saved === "light" || saved === "dark") root.setAttribute("data-theme", saved);
+      } catch (e) {}
+    })();
+  </script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to main content</a>
 
   <header class="site-header">
-    <div class="container header-inner">
+    <div class="wrap nav">
       <a class="brand" href="#top">
-        <img class="brand-mark" src="favicon.svg" alt="" width="26" height="26">
+        <img class="brand-mark" src="favicon.svg" alt="" width="30" height="30">
         <span>Full Art Spire</span>
       </a>
       <nav aria-label="Primary">
         <ul class="nav-links">
-          <li><a href="#before-after">Before &amp; After</a></li>
+          <li><a href="#before-after">Before &amp; after</a></li>
           <li><a href="#depth">Depth</a></li>
           <li><a href="#finishes">Finishes</a></li>
           <li><a href="#the-fool">The Fool</a></li>
           <li><a href="#gallery">Gallery</a></li>
-          <li><a href="#mod-authors">Mod Authors</a></li>
-          <li><a class="nav-cta" href="https://github.com/tzii/full-art-spire/releases/latest" target="_blank" rel="noopener noreferrer">Download</a></li>
+          <li><a href="#in-game">In game</a></li>
+          <li><a href="#mod-authors">Mod authors</a></li>
         </ul>
       </nav>
+      <div class="nav-tools">
+        <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch colour theme">
+          <svg class="i i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.2M12 19.8V22M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2 12h2.2M19.8 12H22M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
+          <svg class="i i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7Z"/></svg>
+        </button>
+        <a class="pill pill-ink" href="https://github.com/tzii/full-art-spire/releases/latest" target="_blank" rel="noopener noreferrer" data-confetti>Download</a>
+      </div>
     </div>
   </header>
 
   <main id="main">
-    <!-- a. Hero -->
+    <!-- Hero -->
     <section id="top" class="hero">
-      <div class="container hero-grid">
-        <div>
-          <p class="hero-pill">Slay the Spire 2 · Visual-Only Mod · v0.4.0</p>
-          <h1>Full Art Spire</h1>
-          <p class="hero-tagline">Full-art cards with layered parallax depth and rarity finishes.</p>
-          <p class="hero-desc">
-            Every card portrait is extended to fill the frame, split into foreground and background layers that follow your cursor with soft shadow and rim light, and topped with finishes that climb from subtle satin to full prismatic.
-          </p>
-          <p class="hero-version-note">
-            Made for Slay the Spire 2 v0.107.1 and the v0.113.1 public beta; 50 newer beta cards keep their original art for now.
-          </p>
-          <div class="hero-actions" role="group" aria-label="Downloads and links">
-            <div class="btn-row">
-              <a class="btn btn-primary" href="https://github.com/tzii/full-art-spire/releases/latest" target="_blank" rel="noopener noreferrer">
-                Download
-              </a>
-              <a class="btn" href="https://github.com/tzii/full-art-spire" target="_blank" rel="noopener noreferrer">
-                GitHub
-              </a>
-            </div>
-            <div class="btn-row">
-              <a id="btn-workshop" class="btn btn-store is-disabled" aria-disabled="true" tabindex="-1">
-                Steam Workshop <span class="btn-badge">Coming soon</span>
-              </a>
-              <a id="btn-nexus" class="btn btn-store is-disabled" aria-disabled="true" tabindex="-1">
-                Nexus Mods <span class="btn-badge">Coming soon</span>
-              </a>
-            </div>
+      <div class="hero-burst" aria-hidden="true"></div>
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <p class="sticker sticker-yellow hero-eyebrow">Slay the Spire 2 mod · v0.4.0</p>
+          <h1 class="wordmark">
+            <span class="sr-only">Full Art Spire</span>
+            <span class="wm-line" aria-hidden="true"><span style="--d:0">F</span><span style="--d:1">u</span><span style="--d:2">l</span><span style="--d:3">l</span></span>
+            <span class="wm-line wm-mark" aria-hidden="true"><span style="--d:4">A</span><span style="--d:5">r</span><span style="--d:6">t</span></span>
+            <span class="wm-line" aria-hidden="true"><span style="--d:7">S</span><span style="--d:8">p</span><span style="--d:9">i</span><span style="--d:10">r</span><span style="--d:11">e</span></span>
+          </h1>
+          <p class="hero-lead"><strong>Card art that doesn't stop at the frame.</strong> Every portrait is extended to the edges, split into layers that lean toward your cursor, and finished in satin, pearl, gold foil or full prismatic by rarity.</p>
+          <div class="hero-actions">
+            <a class="pill pill-big pill-ink" href="https://github.com/tzii/full-art-spire/releases/latest" target="_blank" rel="noopener noreferrer" data-confetti>
+              Download v0.4.0
+              <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v12m0 0-5-5m5 5 5-5M5 20h14"/></svg>
+            </a>
+            <a class="pill pill-big" href="https://github.com/tzii/full-art-spire" target="_blank" rel="noopener noreferrer">
+              GitHub
+              <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
+            </a>
           </div>
+          <div class="hero-stores">
+            <a id="btn-workshop" class="pill pill-small is-disabled" aria-disabled="true" tabindex="-1">Steam Workshop <span class="btn-badge">Coming soon</span></a>
+            <a id="btn-nexus" class="pill pill-small is-disabled" aria-disabled="true" tabindex="-1">Nexus Mods <span class="btn-badge">Coming soon</span></a>
+          </div>
+          <p class="hero-note">Made for Slay the Spire 2 v0.107.1 and the v0.113.1 public beta; 50 newer beta cards keep their original art for now.</p>
         </div>
 
         <div class="hero-stage">
-          <div class="hero-card-frame">
-            <picture>
-              <source srcset="assets/hero-still.webp" media="(prefers-reduced-motion: reduce)">
-              <img
-                src="assets/hero.webp"
-                alt="Apparition — Ancient card rendered with layered parallax depth and full prismatic rainbow finish"
-                width="400"
-                height="600"
-                loading="eager"
-                fetchpriority="high"
-                decoding="async"
-              >
-            </picture>
+          <div class="fan" data-fan data-lightbox-group>
+            <button type="button" class="fan-card" style="--o:-3" data-lightbox-item data-full="assets/cards/full/colorless-hand_of_greed.webp" data-name="Hand of Greed" data-meta="Colorless · Rare">
+              <span class="card-face" data-tilt><img src="assets/cards/thumb/colorless-hand_of_greed.webp" alt="Hand of Greed — Colorless Rare full-art card" width="240" height="360" decoding="async"></span>
+            </button>
+            <button type="button" class="fan-card" style="--o:-2" data-lightbox-item data-full="assets/cards/full/ironclad-conflagration.webp" data-name="Conflagration" data-meta="Ironclad · Rare">
+              <span class="card-face" data-tilt><img src="assets/cards/thumb/ironclad-conflagration.webp" alt="Conflagration — Ironclad Rare full-art card" width="240" height="360" decoding="async"></span>
+            </button>
+            <button type="button" class="fan-card" style="--o:-1" data-lightbox-item data-full="assets/cards/full/fool-divine_shot.webp" data-name="Divine Shot" data-meta="The Fool · Ancient">
+              <span class="card-face" data-tilt><img src="assets/cards/thumb/fool-divine_shot.webp" alt="Divine Shot — The Fool Ancient full-art card" width="256" height="360" decoding="async"></span>
+            </button>
+            <button type="button" class="fan-card fan-hero" style="--o:0" data-lightbox-item data-full="assets/cards/full/event-apparition.webp" data-name="Apparition" data-meta="Event · Ancient">
+              <span class="card-face" data-tilt>
+                <picture>
+                  <source srcset="assets/hero-still.webp" media="(prefers-reduced-motion: reduce)">
+                  <img src="assets/hero.webp" alt="Apparition — Ancient card rendered with layered depth and the full prismatic finish" width="400" height="600" fetchpriority="high" decoding="async">
+                </picture>
+              </span>
+            </button>
+            <button type="button" class="fan-card" style="--o:1" data-lightbox-item data-full="assets/cards/full/necrobinder-forbidden_grimoire.webp" data-name="Forbidden Grimoire" data-meta="Necrobinder · Ancient">
+              <span class="card-face" data-tilt><img src="assets/cards/thumb/necrobinder-forbidden_grimoire.webp" alt="Forbidden Grimoire — Necrobinder Ancient full-art card" width="256" height="360" decoding="async"></span>
+            </button>
+            <button type="button" class="fan-card" style="--o:2" data-lightbox-item data-full="assets/cards/full/regent-meteor_shower.webp" data-name="Meteor Shower" data-meta="Regent · Ancient">
+              <span class="card-face" data-tilt><img src="assets/cards/thumb/regent-meteor_shower.webp" alt="Meteor Shower — Regent Ancient full-art card" width="256" height="360" decoding="async"></span>
+            </button>
+            <button type="button" class="fan-card" style="--o:3" data-lightbox-item data-full="assets/cards/full/silent-wraith_form.webp" data-name="Wraith Form" data-meta="Silent · Ancient">
+              <span class="card-face" data-tilt><img src="assets/cards/thumb/silent-wraith_form.webp" alt="Wraith Form — Silent Ancient full-art card" width="256" height="360" decoding="async"></span>
+            </button>
           </div>
-          <p class="hero-caption">Apparition (Event · Ancient) · Headless shader render</p>
+          <span class="sticker sticker-pink hero-sticker-a" aria-hidden="true">667 cards!</span>
+          <span class="sticker sticker-blue hero-sticker-b" aria-hidden="true">+ the Fool</span>
+          <p class="hero-caption">Centre card: a real render through the mod's shaders. The tilt and shine on the others are this page's own effect.</p>
         </div>
       </div>
     </section>
 
-    <!-- b. Facts strip -->
-    <section class="facts-section" aria-label="Mod overview facts">
-      <div class="container">
-        <div class="facts-grid">
-          <div class="fact-card">
-            <p class="fact-value">667 cards</p>
-            <p class="fact-desc">All 577 cards of the main game plus the Fool's 90 cards from the public beta.</p>
-          </div>
-          <div class="fact-card">
-            <p class="fact-value">12 packs</p>
-            <p class="fact-desc">Ironclad, Silent, Defect, Necrobinder, Regent, colorless, event, token, curse, status, quest, and the Fool.</p>
-          </div>
-          <div class="fact-card">
-            <p class="fact-value">Visual only</p>
-            <p class="fact-desc">No gameplay, balance or card-data changes; flagged as not affecting gameplay.</p>
-          </div>
-          <div class="fact-card">
-            <p class="fact-value">Requires BaseLib</p>
-            <p class="fact-desc">Uses BaseLib for the settings menu and live per-pack switches.</p>
-          </div>
+    <!-- Ribbons of cards -->
+    <section class="ribbons" aria-label="A scrolling sample of full-art cards">
+      <div class="ribbon ribbon-a" aria-hidden="true">
+        <div class="ribbon-track" data-ribbon>
+          <img src="assets/cards/thumb/ironclad-demon_form.webp" alt="" width="240" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/silent-afterimage.webp" alt="" width="240" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/defect-echo_form.webp" alt="" width="240" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/fool-lost_lute.webp" alt="" width="256" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/necrobinder-reaper_form.webp" alt="" width="240" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/regent-the_sealed_throne.webp" alt="" width="256" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/event-apotheosis.webp" alt="" width="256" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/colorless-mayhem.webp" alt="" width="240" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/fool-lullaby.webp" alt="" width="240" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/token-soul.webp" alt="" width="240" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/defect-creative_ai.webp" alt="" width="240" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/ironclad-impervious.webp" alt="" width="240" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/curse-enthralled.webp" alt="" width="240" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/silent-grand_finale.webp" alt="" width="240" height="360" loading="lazy" decoding="async">
+        </div>
+      </div>
+      <div class="ribbon ribbon-b" aria-hidden="true">
+        <div class="ribbon-track ribbon-words" data-ribbon>
+          <span>Ironclad</span><span>Silent</span><span>Defect</span><span>Necrobinder</span><span>Regent</span><span>The Fool</span><span>Colorless</span><span>Event</span><span>Token</span><span>Curse</span><span>Status</span><span>Quest</span>
+        </div>
+      </div>
+      <div class="ribbon ribbon-c" aria-hidden="true">
+        <div class="ribbon-track ribbon-reverse" data-ribbon>
+          <img src="assets/cards/thumb/fool-show_off.webp" alt="" width="240" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/regent-sword_sage.webp" alt="" width="240" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/ironclad-break.webp" alt="" width="256" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/defect-glacier.webp" alt="" width="240" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/necrobinder-protector.webp" alt="" width="256" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/silent-fan_of_knives.webp" alt="" width="240" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/event-enlightenment.webp" alt="" width="240" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/fool-sky_shot.webp" alt="" width="240" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/colorless-entropy.webp" alt="" width="240" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/token-luminesce.webp" alt="" width="240" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/regent-neutron_aegis.webp" alt="" width="240" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/defect-biased_cognition.webp" alt="" width="256" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/necrobinder-end_of_days.webp" alt="" width="240" height="360" loading="lazy" decoding="async">
+          <img src="assets/cards/thumb/ironclad-burning_pact.webp" alt="" width="240" height="360" loading="lazy" decoding="async">
         </div>
       </div>
     </section>
 
-    <!-- c. Before / After -->
-    <section id="before-after" class="section">
-      <div class="container">
+    <!-- Facts -->
+    <section class="wrap facts" aria-label="Mod overview facts">
+      <div class="fact" style="--c: var(--pink); --r: -2deg" data-reveal>
+        <p class="fact-num">667</p>
+        <p class="fact-label">cards</p>
+        <p class="fact-desc">All 577 cards of the main game plus the Fool's 90 from the public beta.</p>
+      </div>
+      <div class="fact" style="--c: var(--yellow); --r: 1.5deg" data-reveal>
+        <p class="fact-num">12</p>
+        <p class="fact-label">packs</p>
+        <p class="fact-desc">Ironclad, Silent, Defect, Necrobinder, Regent, colorless, event, token, curse, status, quest and the Fool.</p>
+      </div>
+      <div class="fact" style="--c: var(--green); --r: -1deg" data-reveal>
+        <p class="fact-num">0</p>
+        <p class="fact-label">gameplay changes</p>
+        <p class="fact-desc">Visual only: no gameplay, balance or card-data changes, and flagged as not affecting gameplay.</p>
+      </div>
+      <div class="fact" style="--c: var(--blue); --r: 2deg" data-reveal>
+        <p class="fact-num">1</p>
+        <p class="fact-label">requirement</p>
+        <p class="fact-desc">BaseLib, which powers the settings menu and the live per-pack switches.</p>
+      </div>
+    </section>
+
+    <!-- Before / After -->
+    <section id="before-after" class="wrap section">
+      <div class="panel" style="--c: var(--blue)">
         <div class="section-head">
-          <p class="section-eyebrow">Full-Art Extensions</p>
-          <h2>Before &amp; After</h2>
-          <p class="section-lead">
-            <strong>Everything outside the original portrait is new.</strong> Drag each slider — or focus it and press the Left/Right arrow keys — to compare Mega Crit's original card portrait at its true position and scale against the extended full-art card.
-          </p>
+          <p class="sticker sticker-ink">Drag the sliders</p>
+          <h2>Past the frame.</h2>
+          <p class="section-lead"><strong>Everything outside the original portrait is new.</strong> Each slider compares Mega Crit's original portrait, at its true position and scale, with the extended full-art card. Focus a slider and use the Left and Right arrow keys to move it.</p>
         </div>
 
         <div class="ba-grid">
-          <figure class="ba-card">
+          <figure class="ba-card" data-reveal style="--r: -1.5deg">
             <div class="ba-viewport" data-ba>
               <img class="ba-img" src="assets/ba-1-before.webp" alt="Crimson Mantle original game portrait positioned inside the darkened full-art canvas" width="640" height="960" loading="lazy" decoding="async">
               <img class="ba-img ba-after" src="assets/ba-1-after.webp" alt="Crimson Mantle extended full-art version with sky and rising flames" width="640" height="960" loading="lazy" decoding="async">
               <span class="ba-tag ba-tag-after" aria-hidden="true">Full art</span>
               <span class="ba-tag ba-tag-before" aria-hidden="true">Original</span>
-              <div class="ba-divider" aria-hidden="true">
-                <span class="ba-knob">&#8596;</span>
-              </div>
+              <div class="ba-divider" aria-hidden="true"><span class="ba-knob"><svg viewBox="0 0 24 24"><path d="M9 6 3 12l6 6M15 6l6 6-6 6"/></svg></span></div>
               <input class="ba-range" type="range" min="0" max="100" value="52" aria-label="Compare original portrait and full art for Crimson Mantle">
             </div>
-            <figcaption class="ba-meta">
-              <span class="ba-title">Crimson Mantle</span>
-              <span class="ba-sub">Ironclad · Rare — extended cobalt sky and soaring flame trail</span>
-            </figcaption>
+            <figcaption class="ba-meta"><span class="ba-title">Crimson Mantle</span><span class="ba-sub">Ironclad · Rare</span></figcaption>
           </figure>
 
-          <figure class="ba-card">
+          <figure class="ba-card" data-reveal style="--r: 1deg">
             <div class="ba-viewport" data-ba>
               <img class="ba-img" src="assets/ba-2-before.webp" alt="Seance original game portrait positioned inside the darkened full-art canvas" width="640" height="960" loading="lazy" decoding="async">
               <img class="ba-img ba-after" src="assets/ba-2-after.webp" alt="Seance extended full-art version with spectral fire rising into the cavern" width="640" height="960" loading="lazy" decoding="async">
               <span class="ba-tag ba-tag-after" aria-hidden="true">Full art</span>
               <span class="ba-tag ba-tag-before" aria-hidden="true">Original</span>
-              <div class="ba-divider" aria-hidden="true">
-                <span class="ba-knob">&#8596;</span>
-              </div>
+              <div class="ba-divider" aria-hidden="true"><span class="ba-knob"><svg viewBox="0 0 24 24"><path d="M9 6 3 12l6 6M15 6l6 6-6 6"/></svg></span></div>
               <input class="ba-range" type="range" min="0" max="100" value="52" aria-label="Compare original portrait and full art for Seance">
             </div>
-            <figcaption class="ba-meta">
-              <span class="ba-title">Seance</span>
-              <span class="ba-sub">Necrobinder · Rare — ghostly flame carried upward beyond the crop</span>
-            </figcaption>
+            <figcaption class="ba-meta"><span class="ba-title">Seance</span><span class="ba-sub">Necrobinder · Rare</span></figcaption>
           </figure>
 
-          <figure class="ba-card">
+          <figure class="ba-card" data-reveal style="--r: -0.5deg">
             <div class="ba-viewport" data-ba>
               <img class="ba-img" src="assets/ba-3-before.webp" alt="Brighten Up original game portrait positioned inside the darkened full-art canvas" width="640" height="960" loading="lazy" decoding="async">
               <img class="ba-img ba-after" src="assets/ba-3-after.webp" alt="Brighten Up extended full-art version for the Fool" width="640" height="960" loading="lazy" decoding="async">
               <span class="ba-tag ba-tag-after" aria-hidden="true">Full art</span>
               <span class="ba-tag ba-tag-before" aria-hidden="true">Original</span>
-              <div class="ba-divider" aria-hidden="true">
-                <span class="ba-knob">&#8596;</span>
-              </div>
+              <div class="ba-divider" aria-hidden="true"><span class="ba-knob"><svg viewBox="0 0 24 24"><path d="M9 6 3 12l6 6M15 6l6 6-6 6"/></svg></span></div>
               <input class="ba-range" type="range" min="0" max="100" value="52" aria-label="Compare original portrait and full art for Brighten Up">
             </div>
-            <figcaption class="ba-meta">
-              <span class="ba-title">Brighten Up</span>
-              <span class="ba-sub">The Fool · Rare — public beta card extended to fill the vertical frame</span>
-            </figcaption>
+            <figcaption class="ba-meta"><span class="ba-title">Brighten Up</span><span class="ba-sub">The Fool · Rare</span></figcaption>
           </figure>
         </div>
       </div>
     </section>
 
-    <!-- d. Depth (interactive browser parallax) -->
-    <section id="depth" class="section">
-      <div class="container">
+    <!-- Depth -->
+    <section id="depth" class="wrap section">
+      <div class="panel panel-split" style="--c: var(--purple)">
         <div class="section-head">
-          <p class="section-eyebrow">Shipped Foreground &amp; Background Layers</p>
-          <h2>Layered Parallax Depth</h2>
-          <p class="section-lead">
-            Each layered card pairs a clean background plate with a masked foreground cutout that sits in front of the inset frame and shifts toward your cursor. This interactive preview uses the shipped layers directly in the browser to approximate the in-game Godot shader effect.
-          </p>
+          <p class="sticker sticker-ink">Layered depth</p>
+          <h2>It leans in.</h2>
+          <p class="section-lead">Each layered card pairs a clean background plate with a cut-out foreground that sits in front of the inset frame and shifts toward your cursor, with a soft shadow and rim light.</p>
+          <p class="section-small">This preview moves the shipped layers in your browser. It approximates the in-game shader rather than reproducing it exactly.</p>
+          <p class="depth-hint" data-depth-hint>Move your pointer over a card, or drag across it.</p>
         </div>
 
         <div class="depth-grid">
-          <div class="depth-card-wrap">
+          <figure class="depth-card-wrap" data-reveal style="--r: -3deg">
             <div class="depth-stage" data-depth-stage>
               <img class="depth-layer depth-bg" src="assets/depth-1-bg.webp" alt="" width="600" height="900" loading="lazy" decoding="async">
               <div class="depth-inset-frame" aria-hidden="true"></div>
@@ -213,14 +273,10 @@
               <div class="depth-sheen" aria-hidden="true"></div>
               <img class="depth-still" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/depth-1-still.webp" alt="Void Form layered card at rest" width="600" height="900" loading="lazy" decoding="async">
             </div>
-            <div class="depth-caption">
-              <h3>Void Form</h3>
-              <p>Regent · Rare — starry silhouette floating over its constellation backdrop</p>
-              <p class="depth-hint" data-depth-hint>Move pointer or drag across the card</p>
-            </div>
-          </div>
+            <figcaption class="depth-caption"><span class="ba-title">Void Form</span><span class="ba-sub">Regent · Rare</span></figcaption>
+          </figure>
 
-          <div class="depth-card-wrap">
+          <figure class="depth-card-wrap" data-reveal style="--r: 3deg">
             <div class="depth-stage" data-depth-stage>
               <img class="depth-layer depth-bg" src="assets/depth-2-bg.webp" alt="" width="600" height="900" loading="lazy" decoding="async">
               <div class="depth-inset-frame" aria-hidden="true"></div>
@@ -229,330 +285,298 @@
               <div class="depth-sheen" aria-hidden="true"></div>
               <img class="depth-still" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/depth-2-still.webp" alt="Quadcast layered card at rest" width="600" height="900" loading="lazy" decoding="async">
             </div>
-            <div class="depth-caption">
-              <h3>Quadcast</h3>
-              <p>Defect · Ancient — orb-casting figure layered over the plasma vortex</p>
-              <p class="depth-hint" data-depth-hint>Move pointer or drag across the card</p>
-            </div>
-          </div>
+            <figcaption class="depth-caption"><span class="ba-title">Quadcast</span><span class="ba-sub">Defect · Ancient</span></figcaption>
+          </figure>
         </div>
       </div>
     </section>
 
-    <!-- e. Rarity finishes -->
-    <section id="finishes" class="section">
-      <div class="container">
-        <div class="section-head">
-          <p class="section-eyebrow">Real Shader Renders</p>
-          <h2>Rarity Finishes</h2>
-          <p class="section-lead">
-            Finishes escalate with each card's true game rarity. Every loop below is rendered directly through the mod's Godot layer and effect shaders using the shipped tier values.
-          </p>
+    <!-- Rarity finishes -->
+    <section id="finishes" class="wrap section">
+      <div class="panel panel-ink">
+        <div class="section-head section-head-center">
+          <p class="sticker sticker-rainbow">Rarity finishes</p>
+          <h2>The rarer, the shinier.</h2>
+          <p class="section-lead">Finishes climb with each card's real game rarity. Every loop below is rendered through the mod's own layer and effect shaders, using the shipped tier values.</p>
         </div>
 
-        <div class="finishes-grid">
-          <article class="finish-card">
-            <div class="finish-media">
-              <img src="assets/finish-common-still.webp" data-still-src="assets/finish-common-still.webp" data-anim-src="assets/finish-common.webp" alt="Cloak of Stars rendered with the Common silver satin finish" width="360" height="540" loading="lazy" decoding="async">
-            </div>
-            <div class="finish-body">
-              <span class="tier-pill tier-common">Common</span>
-              <h3 class="finish-name">Silver satin</h3>
-              <p class="finish-card-title">Cloak of Stars · Regent</p>
-              <p class="finish-desc">Subtle metallic sheen across starters, commons and tokens.</p>
-            </div>
-          </article>
+        <ol class="ladder">
+          <li class="rung" style="--step: 0" data-reveal>
+            <div class="rung-card"><img src="assets/finish-common-still.webp" data-still-src="assets/finish-common-still.webp" data-anim-src="assets/finish-common.webp" alt="Cloak of Stars rendered with the Common silver satin finish" width="360" height="540" loading="lazy" decoding="async"></div>
+            <span class="tier tier-common">Common</span>
+            <h3>Silver satin</h3>
+            <p class="rung-card-name">Cloak of Stars · Regent</p>
+            <p>A subtle metallic sheen across starters, commons and tokens.</p>
+          </li>
+          <li class="rung" style="--step: 1" data-reveal>
+            <div class="rung-card"><img src="assets/finish-uncommon-still.webp" data-still-src="assets/finish-uncommon-still.webp" data-anim-src="assets/finish-uncommon.webp" alt="Darkness rendered with the Uncommon pearl holo finish" width="360" height="540" loading="lazy" decoding="async"></div>
+            <span class="tier tier-uncommon">Uncommon</span>
+            <h3>Pearl holo</h3>
+            <p class="rung-card-name">Darkness · Defect</p>
+            <p>A soft iridescent sweep with light surface sparkle.</p>
+          </li>
+          <li class="rung" style="--step: 2" data-reveal>
+            <div class="rung-card"><img src="assets/finish-rare-still.webp" data-still-src="assets/finish-rare-still.webp" data-anim-src="assets/finish-rare.webp" alt="Florescence rendered with the Rare gold foil finish, star glints and subject aura" width="360" height="540" loading="lazy" decoding="async"></div>
+            <span class="tier tier-rare">Rare</span>
+            <h3>Gold foil, glints &amp; aura</h3>
+            <p class="rung-card-name">Florescence · The Fool</p>
+            <p>Warm gold foil with star glints, backdrop dust and a glowing subject aura.</p>
+          </li>
+          <li class="rung" style="--step: 3" data-reveal>
+            <div class="rung-card"><img src="assets/finish-ancient-still.webp" data-still-src="assets/finish-ancient-still.webp" data-anim-src="assets/finish-ancient.webp" alt="Wraith Form rendered with the Ancient full prismatic finish and rainbow aura" width="360" height="540" loading="lazy" decoding="async"></div>
+            <span class="tier tier-ancient">Ancient</span>
+            <h3>Full prismatic &amp; rainbow aura</h3>
+            <p class="rung-card-name">Wraith Form · Silent</p>
+            <p>Full-spectrum prismatic sheen, dense sparkle and a shifting rainbow aura.</p>
+          </li>
+        </ol>
 
-          <article class="finish-card">
-            <div class="finish-media">
-              <img src="assets/finish-uncommon-still.webp" data-still-src="assets/finish-uncommon-still.webp" data-anim-src="assets/finish-uncommon.webp" alt="Darkness rendered with the Uncommon pearl holo finish" width="360" height="540" loading="lazy" decoding="async">
-            </div>
-            <div class="finish-body">
-              <span class="tier-pill tier-uncommon">Uncommon</span>
-              <h3 class="finish-name">Pearl holo</h3>
-              <p class="finish-card-title">Darkness · Defect</p>
-              <p class="finish-desc">Soft iridescent sweep with light surface sparkle.</p>
-            </div>
-          </article>
-
-          <article class="finish-card">
-            <div class="finish-media">
-              <img src="assets/finish-rare-still.webp" data-still-src="assets/finish-rare-still.webp" data-anim-src="assets/finish-rare.webp" alt="Florescence rendered with the Rare gold foil finish, star glints and subject aura" width="360" height="540" loading="lazy" decoding="async">
-            </div>
-            <div class="finish-body">
-              <span class="tier-pill tier-rare">Rare</span>
-              <h3 class="finish-name">Gold foil, glints &amp; aura</h3>
-              <p class="finish-card-title">Florescence · The Fool</p>
-              <p class="finish-desc">Warm gold foil with star glints, backdrop dust and a glowing subject aura.</p>
-            </div>
-          </article>
-
-          <article class="finish-card">
-            <div class="finish-media">
-              <img src="assets/finish-ancient-still.webp" data-still-src="assets/finish-ancient-still.webp" data-anim-src="assets/finish-ancient.webp" alt="Wraith Form rendered with the Ancient full prismatic finish and rainbow aura" width="360" height="540" loading="lazy" decoding="async">
-            </div>
-            <div class="finish-body">
-              <span class="tier-pill tier-ancient">Ancient</span>
-              <h3 class="finish-name">Full prismatic &amp; rainbow aura</h3>
-              <p class="finish-card-title">Wraith Form · Silent</p>
-              <p class="finish-desc">Full-spectrum prismatic sheen, dense sparkle and a shifting rainbow aura.</p>
-            </div>
-          </article>
-        </div>
-
-        <p class="subtle-note">
-          Event, quest, status and curse cards each carry their own themed finish too — and every finish can be faded, switched to another surface style, or turned off in settings.
-        </p>
+        <p class="section-small section-small-center">Event, quest, status and curse cards carry their own themed finishes too, and every finish can be faded, switched to another surface style or turned off in settings.</p>
       </div>
     </section>
 
-    <!-- f. The Fool -->
-    <section id="the-fool" class="section">
-      <div class="container">
+    <!-- The Fool -->
+    <section id="the-fool" class="wrap section">
+      <div class="panel" style="--c: var(--pink)">
         <div class="section-head">
-          <p class="section-eyebrow">New in 0.4.0 · Public Beta</p>
-          <h2>The Fool</h2>
-          <p class="section-lead">
-            All 90 cards of the Fool from the v0.113.1 public beta ship in 0.4.0 with full-art extensions and layered depth. Select any card to inspect it larger.
-          </p>
+          <p class="sticker sticker-yellow">New in 0.4.0 · public beta</p>
+          <h2>Enter the Fool.</h2>
+          <p class="section-lead">All 90 cards of the Fool from the v0.113.1 public beta ship in 0.4.0 with full-art extensions and layered depth. Pick up any card for a closer look.</p>
         </div>
 
-        <div class="card-grid" data-lightbox-group>
-          <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/fool-divine_shot.webp" data-name="Divine Shot" data-meta="The Fool · Ancient">
-            <img class="card-tile-art" src="assets/cards/thumb/fool-divine_shot.webp" alt="Divine Shot — The Fool Ancient full-art card" width="256" height="360" loading="lazy" decoding="async">
-            <span class="card-tile-meta"><span class="card-tile-name">Divine Shot</span><span class="card-tile-rarity">Ancient</span></span>
+        <div class="table-spread" data-lightbox-group>
+          <button type="button" class="spread-card" style="--r:-6deg; --y: 10px" data-lightbox-item data-full="assets/cards/full/fool-divine_shot.webp" data-name="Divine Shot" data-meta="The Fool · Ancient">
+            <span class="card-face" data-tilt><img src="assets/cards/thumb/fool-divine_shot.webp" alt="Divine Shot — The Fool Ancient full-art card" width="256" height="360" loading="lazy" decoding="async"></span>
+            <span class="spread-name">Divine Shot <em>Ancient</em></span>
           </button>
-          <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/fool-lost_lute.webp" data-name="Lost Lute" data-meta="The Fool · Ancient">
-            <img class="card-tile-art" src="assets/cards/thumb/fool-lost_lute.webp" alt="Lost Lute — The Fool Ancient full-art card" width="256" height="360" loading="lazy" decoding="async">
-            <span class="card-tile-meta"><span class="card-tile-name">Lost Lute</span><span class="card-tile-rarity">Ancient</span></span>
+          <button type="button" class="spread-card" style="--r:4deg; --y: -6px" data-lightbox-item data-full="assets/cards/full/fool-lost_lute.webp" data-name="Lost Lute" data-meta="The Fool · Ancient">
+            <span class="card-face" data-tilt><img src="assets/cards/thumb/fool-lost_lute.webp" alt="Lost Lute — The Fool Ancient full-art card" width="256" height="360" loading="lazy" decoding="async"></span>
+            <span class="spread-name">Lost Lute <em>Ancient</em></span>
           </button>
-          <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/fool-mythic_form.webp" data-name="Mythic Form" data-meta="The Fool · Rare">
-            <img class="card-tile-art" src="assets/cards/thumb/fool-mythic_form.webp" alt="Mythic Form — The Fool Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-            <span class="card-tile-meta"><span class="card-tile-name">Mythic Form</span><span class="card-tile-rarity">Rare</span></span>
+          <button type="button" class="spread-card" style="--r:-3deg; --y: 14px" data-lightbox-item data-full="assets/cards/full/fool-mythic_form.webp" data-name="Mythic Form" data-meta="The Fool · Rare">
+            <span class="card-face" data-tilt><img src="assets/cards/thumb/fool-mythic_form.webp" alt="Mythic Form — The Fool Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+            <span class="spread-name">Mythic Form <em>Rare</em></span>
           </button>
-          <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/fool-show_off.webp" data-name="Show Off" data-meta="The Fool · Rare">
-            <img class="card-tile-art" src="assets/cards/thumb/fool-show_off.webp" alt="Show Off — The Fool Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-            <span class="card-tile-meta"><span class="card-tile-name">Show Off</span><span class="card-tile-rarity">Rare</span></span>
+          <button type="button" class="spread-card" style="--r:7deg; --y: 0px" data-lightbox-item data-full="assets/cards/full/fool-show_off.webp" data-name="Show Off" data-meta="The Fool · Rare">
+            <span class="card-face" data-tilt><img src="assets/cards/thumb/fool-show_off.webp" alt="Show Off — The Fool Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+            <span class="spread-name">Show Off <em>Rare</em></span>
           </button>
-          <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/fool-lullaby.webp" data-name="Lullaby" data-meta="The Fool · Rare">
-            <img class="card-tile-art" src="assets/cards/thumb/fool-lullaby.webp" alt="Lullaby — The Fool Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-            <span class="card-tile-meta"><span class="card-tile-name">Lullaby</span><span class="card-tile-rarity">Rare</span></span>
+          <button type="button" class="spread-card" style="--r:3deg; --y: -10px" data-lightbox-item data-full="assets/cards/full/fool-lullaby.webp" data-name="Lullaby" data-meta="The Fool · Rare">
+            <span class="card-face" data-tilt><img src="assets/cards/thumb/fool-lullaby.webp" alt="Lullaby — The Fool Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+            <span class="spread-name">Lullaby <em>Rare</em></span>
           </button>
-          <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/fool-ecstasy.webp" data-name="Ecstasy" data-meta="The Fool · Rare">
-            <img class="card-tile-art" src="assets/cards/thumb/fool-ecstasy.webp" alt="Ecstasy — The Fool Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-            <span class="card-tile-meta"><span class="card-tile-name">Ecstasy</span><span class="card-tile-rarity">Rare</span></span>
+          <button type="button" class="spread-card" style="--r:-5deg; --y: 8px" data-lightbox-item data-full="assets/cards/full/fool-ecstasy.webp" data-name="Ecstasy" data-meta="The Fool · Rare">
+            <span class="card-face" data-tilt><img src="assets/cards/thumb/fool-ecstasy.webp" alt="Ecstasy — The Fool Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+            <span class="spread-name">Ecstasy <em>Rare</em></span>
           </button>
-          <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/fool-sky_shot.webp" data-name="Sky Shot" data-meta="The Fool · Rare">
-            <img class="card-tile-art" src="assets/cards/thumb/fool-sky_shot.webp" alt="Sky Shot — The Fool Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-            <span class="card-tile-meta"><span class="card-tile-name">Sky Shot</span><span class="card-tile-rarity">Rare</span></span>
+          <button type="button" class="spread-card" style="--r:5deg; --y: -4px" data-lightbox-item data-full="assets/cards/full/fool-sky_shot.webp" data-name="Sky Shot" data-meta="The Fool · Rare">
+            <span class="card-face" data-tilt><img src="assets/cards/thumb/fool-sky_shot.webp" alt="Sky Shot — The Fool Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+            <span class="spread-name">Sky Shot <em>Rare</em></span>
           </button>
-          <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/fool-cho_barbs.webp" data-name="Cho Barbs" data-meta="The Fool · Common">
-            <img class="card-tile-art" src="assets/cards/thumb/fool-cho_barbs.webp" alt="Cho Barbs — The Fool Common full-art card" width="240" height="360" loading="lazy" decoding="async">
-            <span class="card-tile-meta"><span class="card-tile-name">Cho Barbs</span><span class="card-tile-rarity">Common</span></span>
+          <button type="button" class="spread-card" style="--r:-2deg; --y: 12px" data-lightbox-item data-full="assets/cards/full/fool-cho_barbs.webp" data-name="Cho Barbs" data-meta="The Fool · Common">
+            <span class="card-face" data-tilt><img src="assets/cards/thumb/fool-cho_barbs.webp" alt="Cho Barbs — The Fool Common full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+            <span class="spread-name">Cho Barbs <em>Common</em></span>
           </button>
         </div>
       </div>
     </section>
 
-    <!-- g. Every character gallery -->
-    <section id="gallery" class="section">
-      <div class="container">
+    <!-- Gallery -->
+    <section id="gallery" class="wrap section">
+      <div class="panel gallery-panel" data-pool="ironclad">
         <div class="section-head">
-          <p class="section-eyebrow">Card Gallery</p>
-          <h2>Every Character &amp; Card Pool</h2>
-          <p class="section-lead">
-            A sample across the base-game characters, colorless cards and special pools. Pick a pool tab and select any card to open the full-size view.
-          </p>
+          <p class="sticker sticker-ink">Card gallery</p>
+          <h2>Pick a pool.</h2>
+          <p class="section-lead">A sample from every base-game character, the colorless cards and the special pools. Choose a pool, then open any card at full size.</p>
         </div>
 
         <div class="tablist" role="tablist" aria-label="Card pools" data-gallery-tabs>
-          <button type="button" class="tab-btn" role="tab" id="tab-ironclad" aria-selected="true" aria-controls="panel-ironclad" tabindex="0">Ironclad</button>
-          <button type="button" class="tab-btn" role="tab" id="tab-silent" aria-selected="false" aria-controls="panel-silent" tabindex="-1">Silent</button>
-          <button type="button" class="tab-btn" role="tab" id="tab-defect" aria-selected="false" aria-controls="panel-defect" tabindex="-1">Defect</button>
-          <button type="button" class="tab-btn" role="tab" id="tab-necrobinder" aria-selected="false" aria-controls="panel-necrobinder" tabindex="-1">Necrobinder</button>
-          <button type="button" class="tab-btn" role="tab" id="tab-regent" aria-selected="false" aria-controls="panel-regent" tabindex="-1">Regent</button>
-          <button type="button" class="tab-btn" role="tab" id="tab-colorless" aria-selected="false" aria-controls="panel-colorless" tabindex="-1">Colorless</button>
-          <button type="button" class="tab-btn" role="tab" id="tab-event" aria-selected="false" aria-controls="panel-event" tabindex="-1">Event</button>
-          <button type="button" class="tab-btn" role="tab" id="tab-curse" aria-selected="false" aria-controls="panel-curse" tabindex="-1">Curse</button>
-          <button type="button" class="tab-btn" role="tab" id="tab-token" aria-selected="false" aria-controls="panel-token" tabindex="-1">Token</button>
+          <button type="button" class="tab-btn" role="tab" id="tab-ironclad" data-pool="ironclad" aria-selected="true" aria-controls="panel-ironclad" tabindex="0">Ironclad</button>
+          <button type="button" class="tab-btn" role="tab" id="tab-silent" data-pool="silent" aria-selected="false" aria-controls="panel-silent" tabindex="-1">Silent</button>
+          <button type="button" class="tab-btn" role="tab" id="tab-defect" data-pool="defect" aria-selected="false" aria-controls="panel-defect" tabindex="-1">Defect</button>
+          <button type="button" class="tab-btn" role="tab" id="tab-necrobinder" data-pool="necrobinder" aria-selected="false" aria-controls="panel-necrobinder" tabindex="-1">Necrobinder</button>
+          <button type="button" class="tab-btn" role="tab" id="tab-regent" data-pool="regent" aria-selected="false" aria-controls="panel-regent" tabindex="-1">Regent</button>
+          <button type="button" class="tab-btn" role="tab" id="tab-colorless" data-pool="colorless" aria-selected="false" aria-controls="panel-colorless" tabindex="-1">Colorless</button>
+          <button type="button" class="tab-btn" role="tab" id="tab-event" data-pool="event" aria-selected="false" aria-controls="panel-event" tabindex="-1">Event</button>
+          <button type="button" class="tab-btn" role="tab" id="tab-curse" data-pool="curse" aria-selected="false" aria-controls="panel-curse" tabindex="-1">Curse</button>
+          <button type="button" class="tab-btn" role="tab" id="tab-token" data-pool="token" aria-selected="false" aria-controls="panel-token" tabindex="-1">Token</button>
         </div>
 
         <!-- Ironclad -->
         <div id="panel-ironclad" class="tabpanel" role="tabpanel" aria-labelledby="tab-ironclad">
-          <div class="card-grid is-six" data-lightbox-group>
+          <div class="card-grid" data-lightbox-group>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/ironclad-break.webp" data-name="Break" data-meta="Ironclad · Ancient">
-              <img class="card-tile-art" src="assets/cards/thumb/ironclad-break.webp" alt="Break — Ironclad Ancient full-art card" width="256" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Break</span><span class="card-tile-rarity">Ancient</span></span>
+              <span class="card-face" data-tilt><img src="assets/cards/thumb/ironclad-break.webp" alt="Break — Ironclad Ancient full-art card" width="256" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Break <em>Ancient</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/ironclad-corruption.webp" data-name="Corruption" data-meta="Ironclad · Ancient">
-              <img class="card-tile-art" src="assets/cards/thumb/ironclad-corruption.webp" alt="Corruption — Ironclad Ancient full-art card" width="256" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Corruption</span><span class="card-tile-rarity">Ancient</span></span>
+              <span class="card-face" data-tilt><img src="assets/cards/thumb/ironclad-corruption.webp" alt="Corruption — Ironclad Ancient full-art card" width="256" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Corruption <em>Ancient</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/ironclad-demon_form.webp" data-name="Demon Form" data-meta="Ironclad · Rare">
-              <img class="card-tile-art" src="assets/cards/thumb/ironclad-demon_form.webp" alt="Demon Form — Ironclad Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Demon Form</span><span class="card-tile-rarity">Rare</span></span>
+              <span class="card-face" data-tilt><img src="assets/cards/thumb/ironclad-demon_form.webp" alt="Demon Form — Ironclad Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Demon Form <em>Rare</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/ironclad-impervious.webp" data-name="Impervious" data-meta="Ironclad · Rare">
-              <img class="card-tile-art" src="assets/cards/thumb/ironclad-impervious.webp" alt="Impervious — Ironclad Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Impervious</span><span class="card-tile-rarity">Rare</span></span>
+              <span class="card-face" data-tilt><img src="assets/cards/thumb/ironclad-impervious.webp" alt="Impervious — Ironclad Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Impervious <em>Rare</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/ironclad-conflagration.webp" data-name="Conflagration" data-meta="Ironclad · Rare">
-              <img class="card-tile-art" src="assets/cards/thumb/ironclad-conflagration.webp" alt="Conflagration — Ironclad Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Conflagration</span><span class="card-tile-rarity">Rare</span></span>
+              <span class="card-face" data-tilt><img src="assets/cards/thumb/ironclad-conflagration.webp" alt="Conflagration — Ironclad Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Conflagration <em>Rare</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/ironclad-burning_pact.webp" data-name="Burning Pact" data-meta="Ironclad · Uncommon">
-              <img class="card-tile-art" src="assets/cards/thumb/ironclad-burning_pact.webp" alt="Burning Pact — Ironclad Uncommon full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Burning Pact</span><span class="card-tile-rarity">Uncommon</span></span>
+              <span class="card-face" data-tilt><img src="assets/cards/thumb/ironclad-burning_pact.webp" alt="Burning Pact — Ironclad Uncommon full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Burning Pact <em>Uncommon</em></span>
             </button>
           </div>
         </div>
-
         <!-- Silent -->
         <div id="panel-silent" class="tabpanel" role="tabpanel" aria-labelledby="tab-silent" hidden>
-          <div class="card-grid is-six" data-lightbox-group>
+          <div class="card-grid" data-lightbox-group>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/silent-wraith_form.webp" data-name="Wraith Form" data-meta="Silent · Ancient">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/silent-wraith_form.webp" alt="Wraith Form — Silent Ancient full-art card" width="256" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Wraith Form</span><span class="card-tile-rarity">Ancient</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/silent-wraith_form.webp" alt="Wraith Form — Silent Ancient full-art card" width="256" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Wraith Form <em>Ancient</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/silent-suppress.webp" data-name="Suppress" data-meta="Silent · Ancient">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/silent-suppress.webp" alt="Suppress — Silent Ancient full-art card" width="256" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Suppress</span><span class="card-tile-rarity">Ancient</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/silent-suppress.webp" alt="Suppress — Silent Ancient full-art card" width="256" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Suppress <em>Ancient</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/silent-afterimage.webp" data-name="Afterimage" data-meta="Silent · Rare">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/silent-afterimage.webp" alt="Afterimage — Silent Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Afterimage</span><span class="card-tile-rarity">Rare</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/silent-afterimage.webp" alt="Afterimage — Silent Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Afterimage <em>Rare</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/silent-fan_of_knives.webp" data-name="Fan of Knives" data-meta="Silent · Rare">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/silent-fan_of_knives.webp" alt="Fan of Knives — Silent Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Fan of Knives</span><span class="card-tile-rarity">Rare</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/silent-fan_of_knives.webp" alt="Fan of Knives — Silent Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Fan of Knives <em>Rare</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/silent-grand_finale.webp" data-name="Grand Finale" data-meta="Silent · Rare">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/silent-grand_finale.webp" alt="Grand Finale — Silent Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Grand Finale</span><span class="card-tile-rarity">Rare</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/silent-grand_finale.webp" alt="Grand Finale — Silent Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Grand Finale <em>Rare</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/silent-serpent_form.webp" data-name="Serpent Form" data-meta="Silent · Rare">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/silent-serpent_form.webp" alt="Serpent Form — Silent Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Serpent Form</span><span class="card-tile-rarity">Rare</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/silent-serpent_form.webp" alt="Serpent Form — Silent Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Serpent Form <em>Rare</em></span>
             </button>
           </div>
         </div>
 
         <!-- Defect -->
         <div id="panel-defect" class="tabpanel" role="tabpanel" aria-labelledby="tab-defect" hidden>
-          <div class="card-grid is-six" data-lightbox-group>
+          <div class="card-grid" data-lightbox-group>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/defect-biased_cognition.webp" data-name="Biased Cognition" data-meta="Defect · Ancient">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/defect-biased_cognition.webp" alt="Biased Cognition — Defect Ancient full-art card" width="256" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Biased Cognition</span><span class="card-tile-rarity">Ancient</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/defect-biased_cognition.webp" alt="Biased Cognition — Defect Ancient full-art card" width="256" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Biased Cognition <em>Ancient</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/defect-quadcast.webp" data-name="Quadcast" data-meta="Defect · Ancient">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/defect-quadcast.webp" alt="Quadcast — Defect Ancient full-art card" width="256" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Quadcast</span><span class="card-tile-rarity">Ancient</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/defect-quadcast.webp" alt="Quadcast — Defect Ancient full-art card" width="256" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Quadcast <em>Ancient</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/defect-echo_form.webp" data-name="Echo Form" data-meta="Defect · Rare">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/defect-echo_form.webp" alt="Echo Form — Defect Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Echo Form</span><span class="card-tile-rarity">Rare</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/defect-echo_form.webp" alt="Echo Form — Defect Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Echo Form <em>Rare</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/defect-creative_ai.webp" data-name="Creative AI" data-meta="Defect · Rare">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/defect-creative_ai.webp" alt="Creative AI — Defect Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Creative AI</span><span class="card-tile-rarity">Rare</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/defect-creative_ai.webp" alt="Creative AI — Defect Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Creative AI <em>Rare</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/defect-genetic_algorithm.webp" data-name="Genetic Algorithm" data-meta="Defect · Rare">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/defect-genetic_algorithm.webp" alt="Genetic Algorithm — Defect Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Genetic Algorithm</span><span class="card-tile-rarity">Rare</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/defect-genetic_algorithm.webp" alt="Genetic Algorithm — Defect Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Genetic Algorithm <em>Rare</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/defect-glacier.webp" data-name="Glacier" data-meta="Defect · Uncommon">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/defect-glacier.webp" alt="Glacier — Defect Uncommon full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Glacier</span><span class="card-tile-rarity">Uncommon</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/defect-glacier.webp" alt="Glacier — Defect Uncommon full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Glacier <em>Uncommon</em></span>
             </button>
           </div>
         </div>
 
         <!-- Necrobinder -->
         <div id="panel-necrobinder" class="tabpanel" role="tabpanel" aria-labelledby="tab-necrobinder" hidden>
-          <div class="card-grid is-six" data-lightbox-group>
+          <div class="card-grid" data-lightbox-group>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/necrobinder-protector.webp" data-name="Protector" data-meta="Necrobinder · Ancient">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/necrobinder-protector.webp" alt="Protector — Necrobinder Ancient full-art card" width="256" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Protector</span><span class="card-tile-rarity">Ancient</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/necrobinder-protector.webp" alt="Protector — Necrobinder Ancient full-art card" width="256" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Protector <em>Ancient</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/necrobinder-forbidden_grimoire.webp" data-name="Forbidden Grimoire" data-meta="Necrobinder · Ancient">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/necrobinder-forbidden_grimoire.webp" alt="Forbidden Grimoire — Necrobinder Ancient full-art card" width="256" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Forbidden Grimoire</span><span class="card-tile-rarity">Ancient</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/necrobinder-forbidden_grimoire.webp" alt="Forbidden Grimoire — Necrobinder Ancient full-art card" width="256" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Forbidden Grimoire <em>Ancient</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/necrobinder-reaper_form.webp" data-name="Reaper Form" data-meta="Necrobinder · Rare">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/necrobinder-reaper_form.webp" alt="Reaper Form — Necrobinder Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Reaper Form</span><span class="card-tile-rarity">Rare</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/necrobinder-reaper_form.webp" alt="Reaper Form — Necrobinder Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Reaper Form <em>Rare</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/necrobinder-end_of_days.webp" data-name="End of Days" data-meta="Necrobinder · Rare">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/necrobinder-end_of_days.webp" alt="End of Days — Necrobinder Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">End of Days</span><span class="card-tile-rarity">Rare</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/necrobinder-end_of_days.webp" alt="End of Days — Necrobinder Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">End of Days <em>Rare</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/necrobinder-necro_mastery.webp" data-name="Necro Mastery" data-meta="Necrobinder · Rare">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/necrobinder-necro_mastery.webp" alt="Necro Mastery — Necrobinder Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Necro Mastery</span><span class="card-tile-rarity">Rare</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/necrobinder-necro_mastery.webp" alt="Necro Mastery — Necrobinder Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Necro Mastery <em>Rare</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/necrobinder-countdown.webp" data-name="Countdown" data-meta="Necrobinder · Uncommon">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/necrobinder-countdown.webp" alt="Countdown — Necrobinder Uncommon full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Countdown</span><span class="card-tile-rarity">Uncommon</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/necrobinder-countdown.webp" alt="Countdown — Necrobinder Uncommon full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Countdown <em>Uncommon</em></span>
             </button>
           </div>
         </div>
 
         <!-- Regent -->
         <div id="panel-regent" class="tabpanel" role="tabpanel" aria-labelledby="tab-regent" hidden>
-          <div class="card-grid is-six" data-lightbox-group>
+          <div class="card-grid" data-lightbox-group>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/regent-the_sealed_throne.webp" data-name="The Sealed Throne" data-meta="Regent · Ancient">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/regent-the_sealed_throne.webp" alt="The Sealed Throne — Regent Ancient full-art card" width="256" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">The Sealed Throne</span><span class="card-tile-rarity">Ancient</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/regent-the_sealed_throne.webp" alt="The Sealed Throne — Regent Ancient full-art card" width="256" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">The Sealed Throne <em>Ancient</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/regent-meteor_shower.webp" data-name="Meteor Shower" data-meta="Regent · Ancient">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/regent-meteor_shower.webp" alt="Meteor Shower — Regent Ancient full-art card" width="256" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Meteor Shower</span><span class="card-tile-rarity">Ancient</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/regent-meteor_shower.webp" alt="Meteor Shower — Regent Ancient full-art card" width="256" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Meteor Shower <em>Ancient</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/regent-void_form.webp" data-name="Void Form" data-meta="Regent · Rare">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/regent-void_form.webp" alt="Void Form — Regent Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Void Form</span><span class="card-tile-rarity">Rare</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/regent-void_form.webp" alt="Void Form — Regent Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Void Form <em>Rare</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/regent-neutron_aegis.webp" data-name="Neutron Aegis" data-meta="Regent · Rare">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/regent-neutron_aegis.webp" alt="Neutron Aegis — Regent Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Neutron Aegis</span><span class="card-tile-rarity">Rare</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/regent-neutron_aegis.webp" alt="Neutron Aegis — Regent Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Neutron Aegis <em>Rare</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/regent-sword_sage.webp" data-name="Sword Sage" data-meta="Regent · Rare">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/regent-sword_sage.webp" alt="Sword Sage — Regent Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Sword Sage</span><span class="card-tile-rarity">Rare</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/regent-sword_sage.webp" alt="Sword Sage — Regent Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Sword Sage <em>Rare</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/regent-furnace.webp" data-name="Furnace" data-meta="Regent · Uncommon">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/regent-furnace.webp" alt="Furnace — Regent Uncommon full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Furnace</span><span class="card-tile-rarity">Uncommon</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/regent-furnace.webp" alt="Furnace — Regent Uncommon full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Furnace <em>Uncommon</em></span>
             </button>
           </div>
         </div>
 
         <!-- Colorless -->
         <div id="panel-colorless" class="tabpanel" role="tabpanel" aria-labelledby="tab-colorless" hidden>
-          <div class="card-grid is-six" data-lightbox-group>
+          <div class="card-grid" data-lightbox-group>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/colorless-entropy.webp" data-name="Entropy" data-meta="Colorless · Rare">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/colorless-entropy.webp" alt="Entropy — Colorless Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Entropy</span><span class="card-tile-rarity">Rare</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/colorless-entropy.webp" alt="Entropy — Colorless Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Entropy <em>Rare</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/colorless-hand_of_greed.webp" data-name="Hand of Greed" data-meta="Colorless · Rare">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/colorless-hand_of_greed.webp" alt="Hand of Greed — Colorless Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Hand of Greed</span><span class="card-tile-rarity">Rare</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/colorless-hand_of_greed.webp" alt="Hand of Greed — Colorless Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Hand of Greed <em>Rare</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/colorless-master_of_strategy.webp" data-name="Master of Strategy" data-meta="Colorless · Rare">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/colorless-master_of_strategy.webp" alt="Master of Strategy — Colorless Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Master of Strategy</span><span class="card-tile-rarity">Rare</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/colorless-master_of_strategy.webp" alt="Master of Strategy — Colorless Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Master of Strategy <em>Rare</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/colorless-mayhem.webp" data-name="Mayhem" data-meta="Colorless · Rare">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/colorless-mayhem.webp" alt="Mayhem — Colorless Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Mayhem</span><span class="card-tile-rarity">Rare</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/colorless-mayhem.webp" alt="Mayhem — Colorless Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Mayhem <em>Rare</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/colorless-eternal_armor.webp" data-name="Eternal Armor" data-meta="Colorless · Rare">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/colorless-eternal_armor.webp" alt="Eternal Armor — Colorless Rare full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Eternal Armor</span><span class="card-tile-rarity">Rare</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/colorless-eternal_armor.webp" alt="Eternal Armor — Colorless Rare full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Eternal Armor <em>Rare</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/colorless-dramatic_entrance.webp" data-name="Dramatic Entrance" data-meta="Colorless · Uncommon">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/colorless-dramatic_entrance.webp" alt="Dramatic Entrance — Colorless Uncommon full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Dramatic Entrance</span><span class="card-tile-rarity">Uncommon</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/colorless-dramatic_entrance.webp" alt="Dramatic Entrance — Colorless Uncommon full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Dramatic Entrance <em>Uncommon</em></span>
             </button>
           </div>
         </div>
@@ -561,20 +585,20 @@
         <div id="panel-event" class="tabpanel" role="tabpanel" aria-labelledby="tab-event" hidden>
           <div class="card-grid" data-lightbox-group>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/event-apotheosis.webp" data-name="Apotheosis" data-meta="Event · Ancient">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/event-apotheosis.webp" alt="Apotheosis — Event Ancient full-art card" width="256" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Apotheosis</span><span class="card-tile-rarity">Ancient</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/event-apotheosis.webp" alt="Apotheosis — Event Ancient full-art card" width="256" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Apotheosis <em>Ancient</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/event-apparition.webp" data-name="Apparition" data-meta="Event · Ancient">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/event-apparition.webp" alt="Apparition — Event Ancient full-art card" width="256" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Apparition</span><span class="card-tile-rarity">Ancient</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/event-apparition.webp" alt="Apparition — Event Ancient full-art card" width="256" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Apparition <em>Ancient</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/event-enlightenment.webp" data-name="Enlightenment" data-meta="Event">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/event-enlightenment.webp" alt="Enlightenment — Event full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Enlightenment</span><span class="card-tile-rarity">Event</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/event-enlightenment.webp" alt="Enlightenment — Event full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Enlightenment <em>Event</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/event-metamorphosis.webp" data-name="Metamorphosis" data-meta="Event">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/event-metamorphosis.webp" alt="Metamorphosis — Event full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Metamorphosis</span><span class="card-tile-rarity">Event</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/event-metamorphosis.webp" alt="Metamorphosis — Event full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Metamorphosis <em>Event</em></span>
             </button>
           </div>
         </div>
@@ -583,20 +607,20 @@
         <div id="panel-curse" class="tabpanel" role="tabpanel" aria-labelledby="tab-curse" hidden>
           <div class="card-grid" data-lightbox-group>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/curse-ascenders_bane.webp" data-name="Ascender's Bane" data-meta="Curse">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/curse-ascenders_bane.webp" alt="Ascender's Bane — Curse full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Ascender's Bane</span><span class="card-tile-rarity">Curse</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/curse-ascenders_bane.webp" alt="Ascender's Bane — Curse full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Ascender's Bane <em>Curse</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/curse-curse_of_the_bell.webp" data-name="Curse of the Bell" data-meta="Curse">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/curse-curse_of_the_bell.webp" alt="Curse of the Bell — Curse full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Curse of the Bell</span><span class="card-tile-rarity">Curse</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/curse-curse_of_the_bell.webp" alt="Curse of the Bell — Curse full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Curse of the Bell <em>Curse</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/curse-enthralled.webp" data-name="Enthralled" data-meta="Curse">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/curse-enthralled.webp" alt="Enthralled — Curse full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Enthralled</span><span class="card-tile-rarity">Curse</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/curse-enthralled.webp" alt="Enthralled — Curse full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Enthralled <em>Curse</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/curse-poor_sleep.webp" data-name="Poor Sleep" data-meta="Curse">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/curse-poor_sleep.webp" alt="Poor Sleep — Curse full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Poor Sleep</span><span class="card-tile-rarity">Curse</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/curse-poor_sleep.webp" alt="Poor Sleep — Curse full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Poor Sleep <em>Curse</em></span>
             </button>
           </div>
         </div>
@@ -605,108 +629,183 @@
         <div id="panel-token" class="tabpanel" role="tabpanel" aria-labelledby="tab-token" hidden>
           <div class="card-grid" data-lightbox-group>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/token-sovereign_blade.webp" data-name="Sovereign Blade" data-meta="Token">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/token-sovereign_blade.webp" alt="Sovereign Blade — Token full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Sovereign Blade</span><span class="card-tile-rarity">Token</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/token-sovereign_blade.webp" alt="Sovereign Blade — Token full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Sovereign Blade <em>Token</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/token-soul.webp" data-name="Soul" data-meta="Token">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/token-soul.webp" alt="Soul — Token full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Soul</span><span class="card-tile-rarity">Token</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/token-soul.webp" alt="Soul — Token full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Soul <em>Token</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/token-shiv.webp" data-name="Shiv" data-meta="Token">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/token-shiv.webp" alt="Shiv — Token full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Shiv</span><span class="card-tile-rarity">Token</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/token-shiv.webp" alt="Shiv — Token full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Shiv <em>Token</em></span>
             </button>
             <button type="button" class="card-tile" data-lightbox-item data-full="assets/cards/full/token-luminesce.webp" data-name="Luminesce" data-meta="Token">
-              <img class="card-tile-art" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/token-luminesce.webp" alt="Luminesce — Token full-art card" width="240" height="360" loading="lazy" decoding="async">
-              <span class="card-tile-meta"><span class="card-tile-name">Luminesce</span><span class="card-tile-rarity">Token</span></span>
+              <span class="card-face" data-tilt><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="assets/cards/thumb/token-luminesce.webp" alt="Luminesce — Token full-art card" width="240" height="360" loading="lazy" decoding="async"></span>
+              <span class="tile-name">Luminesce <em>Token</em></span>
             </button>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- h. Live pack switches & settings -->
-    <section id="pack-switches" class="section">
-      <div class="container split-grid">
-        <div>
-          <p class="section-eyebrow">BaseLib Settings</p>
-          <h2>Live Pack Switches</h2>
-          <p class="section-lead">
-            Every character and card type is its own pack. Open the mod settings from the BaseLib menu, switch any pack off under <strong>Card packs</strong>, and the change shows at once — even on cards already on screen, which get the game's original portrait layout back.
-          </p>
-          <ul class="feature-list">
-            <li>Toggle any of the 12 bundled packs — or packs from other mods — independently.</li>
-            <li>Adjust or disable parallax depth, enable Reduced Motion, or switch to flat full art without layers.</li>
-            <li>Turn rarity finishes off, fade their strength, or swap finish styles.</li>
-            <li>Press <kbd>F8</kbd> while hovering a card to write a local report for bug reports.</li>
-          </ul>
+    <!-- Live pack switches -->
+    <section id="pack-switches" class="wrap section">
+      <div class="panel panel-split pack-panel" style="--c: var(--teal)">
+        <div class="section-head">
+          <p class="sticker sticker-ink">BaseLib settings</p>
+          <h2>Switch packs live.</h2>
+          <p class="section-lead">Every character and card type is its own pack. Open the mod's settings from the BaseLib menu and switch any pack off under <strong>Card packs</strong>. The change shows at once, even on cards already on screen, which get the game's original portrait layout back.</p>
+        </div>
+        <figure class="shot-card" data-lightbox-group data-reveal style="--r: 1.2deg">
+          <button type="button" class="shot-trigger" data-lightbox-item data-wide="true" data-full="assets/ingame-settings-packs.webp" data-name="Card packs settings" data-meta="BaseLib menu · v0.113.1 public beta">
+            <img src="assets/ingame-settings-packs.webp" alt="In-game FullArtSpire settings menu inside BaseLib showing individual Card packs switches enabled for Colorless, Curse, Defect, Event, Fool, Ironclad, Necrobinder, Quest, Regent and Silent" width="1440" height="810" loading="lazy" decoding="async">
+            <span class="shot-zoom" aria-hidden="true">Zoom</span>
+          </button>
+          <figcaption class="shot-meta"><span class="ba-title">Card packs settings</span><span class="ba-sub">BaseLib menu · toggle each pool on its own</span></figcaption>
+        </figure>
+        <ul class="switch-list switch-grid">
+          <li><span class="switch is-on" aria-hidden="true"></span><span>Toggle any of the 12 bundled packs, or packs from other mods, on their own.</span></li>
+          <li><span class="switch is-on" aria-hidden="true"></span><span>Adjust or turn off parallax depth, enable Reduced Motion, or switch to flat full art without layers.</span></li>
+          <li><span class="switch" aria-hidden="true"></span><span>Turn rarity finishes off, fade their strength, or swap finish styles.</span></li>
+          <li><span class="key" aria-hidden="true">F8</span><span>Press <kbd>F8</kbd> while hovering a card to write a local report for bug reports.</span></li>
+        </ul>
+        <figure class="live-compare" data-reveal style="--r: -0.4deg">
+          <div class="ba-viewport ba-wide" data-ba>
+            <img class="ba-img" src="assets/ingame-pack-off.webp" alt="In-game Necrobinder combat with the Necrobinder pack switched off, showing the game's original framed portrait on Reaper Form and the rest of the hand" width="1600" height="900" loading="lazy" decoding="async">
+            <img class="ba-img ba-after" src="assets/ingame-pack-on.webp" alt="Same combat turn with the Necrobinder pack switched on, showing full-art Reaper Form with Rare glow and full-art cards across the hand" width="1600" height="900" loading="lazy" decoding="async">
+            <span class="ba-tag ba-tag-after" aria-hidden="true">Pack on</span>
+            <span class="ba-tag ba-tag-before" aria-hidden="true">Pack off</span>
+            <div class="ba-divider" aria-hidden="true"><span class="ba-knob"><svg viewBox="0 0 24 24"><path d="M9 6 3 12l6 6M15 6l6 6-6 6"/></svg></span></div>
+            <input class="ba-range" type="range" min="0" max="100" value="58" aria-label="Compare in-game combat with the Necrobinder pack switched on versus switched off">
+          </div>
+          <figcaption class="ba-meta"><span class="ba-title">Live toggle in combat — drag across Reaper Form</span><span class="ba-sub">Same turn, Necrobinder pack on vs. off · captured in v0.113.1</span></figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- In the game -->
+    <section id="in-game" class="wrap section">
+      <div class="panel panel-ink">
+        <div class="section-head">
+          <p class="sticker sticker-yellow">Captured in v0.113.1</p>
+          <h2>In the game.</h2>
+          <p class="section-lead">Real footage and screenshots from Slay the Spire 2 — card frames, rules text, rarity glow, layered parallax and the Fool, running live with BaseLib.</p>
         </div>
 
-        <div class="screenshot-slot" role="region" aria-label="In-game screenshot placeholder">
-          <span class="screenshot-slot-badge">In-game screenshot slot</span>
-          <h3>BaseLib settings &amp; live hand capture</h3>
-          <p>
-            Reserved for an actual in-game screenshot showing the Card packs switches and cards on screen. Replace this slot once captured.
-          </p>
+        <figure class="reel-wrap" data-reveal>
+          <div class="reel-frame">
+            <video class="reel-video" data-ingame-video controls muted loop playsinline preload="metadata" poster="assets/ingame-reel-poster.webp" width="1280" height="720" aria-label="16-second in-game capture showing Ancient inspect parallax, Compendium browsing, Fool combat and Rare card rewards">
+              <source src="assets/ingame-reel.mp4" type="video/mp4">
+            </video>
+          </div>
+          <figcaption class="reel-caption">
+            <span class="ba-title">Gameplay capture (silent)</span>
+            <span class="ba-sub">Forbidden Grimoire &amp; Neow's Fury inspect parallax · Compendium · Fool combat · Rare card reward</span>
+          </figcaption>
+        </figure>
+
+        <div class="shot-grid" data-lightbox-group>
+          <figure class="shot-card shot-card-dark" data-reveal style="--r: -1deg">
+            <button type="button" class="shot-trigger" data-lightbox-item data-wide="true" data-full="assets/ingame-library.webp" data-name="Card library — Regent" data-meta="In-game Compendium · 15 full-art cards with frames &amp; text">
+              <img src="assets/ingame-library.webp" alt="In-game Compendium grid filtered to Regent showing 15 full-art cards including Orbit, Spectrum Shift, Comet, Heavenly Drill, Make It So, Beat into Shape, Crash Landing, Dying Star, Heirloom Hammer and Seven Stars" width="1600" height="900" loading="lazy" decoding="async">
+              <span class="shot-zoom" aria-hidden="true">Zoom</span>
+            </button>
+            <figcaption class="shot-meta"><span class="ba-title">Card library grid</span><span class="ba-sub">Regent · Compendium</span></figcaption>
+          </figure>
+
+          <figure class="shot-card shot-card-dark" data-reveal style="--r: 1deg">
+            <button type="button" class="shot-trigger" data-lightbox-item data-wide="true" data-full="assets/ingame-ancient.webp" data-name="Forbidden Grimoire" data-meta="In-game inspect view · Ancient prismatic finish">
+              <img src="assets/ingame-ancient.webp" alt="In-game large inspect view of Forbidden Grimoire showing full-art book and runes with the Ancient prismatic finish and Eternal keyword tooltip" width="1600" height="900" loading="lazy" decoding="async">
+              <span class="shot-zoom" aria-hidden="true">Zoom</span>
+            </button>
+            <figcaption class="shot-meta"><span class="ba-title">Ancient inspect view</span><span class="ba-sub">Forbidden Grimoire · Prismatic</span></figcaption>
+          </figure>
+
+          <figure class="shot-card shot-card-dark" data-reveal style="--r: -0.6deg">
+            <button type="button" class="shot-trigger" data-lightbox-item data-wide="true" data-full="assets/ingame-reward.webp" data-name="Card reward — Rare Honing" data-meta="In-game Choose a Card · The Fool · gold foil Rare glow">
+              <img src="assets/ingame-reward.webp" alt="In-game Choose a Card reward screen for the Fool showing Rain Shot, glowing Rare Honing with gold aura, and Wah Sweep" width="1600" height="900" loading="lazy" decoding="async">
+              <span class="shot-zoom" aria-hidden="true">Zoom</span>
+            </button>
+            <figcaption class="shot-meta"><span class="ba-title">Card reward screen</span><span class="ba-sub">The Fool · Rare Honing</span></figcaption>
+          </figure>
+
+          <figure class="shot-card shot-card-dark" data-reveal style="--r: 0.8deg">
+            <button type="button" class="shot-trigger" data-lightbox-item data-wide="true" data-full="assets/ingame-fool-combat.webp" data-name="The Fool in combat" data-meta="In-game public beta · hand with Ancient Neow's Fury">
+              <img src="assets/ingame-fool-combat.webp" alt="In-game combat playing as the Fool with a hand of full-art cards including Strike, Defend, Ancient Neow's Fury and Foolish Shot" width="1600" height="900" loading="lazy" decoding="async">
+              <span class="shot-zoom" aria-hidden="true">Zoom</span>
+            </button>
+            <figcaption class="shot-meta"><span class="ba-title">The Fool in combat</span><span class="ba-sub">Public beta · Live hand</span></figcaption>
+          </figure>
+
+          <figure class="shot-card shot-card-dark" data-reveal style="--r: -1.1deg">
+            <button type="button" class="shot-trigger" data-lightbox-item data-wide="true" data-full="assets/ingame-shop.webp" data-name="Merchant shop" data-meta="In-game shop rug · Necrobinder run">
+              <img src="assets/ingame-shop.webp" alt="In-game Merchant shop showing seven full-art cards on the shop rug alongside relics, potions and card removal" width="1600" height="900" loading="lazy" decoding="async">
+              <span class="shot-zoom" aria-hidden="true">Zoom</span>
+            </button>
+            <figcaption class="shot-meta"><span class="ba-title">Merchant shop</span><span class="ba-sub">Seven cards on the rug</span></figcaption>
+          </figure>
+
+          <figure class="shot-card shot-card-dark" data-reveal style="--r: 0.6deg">
+            <button type="button" class="shot-trigger" data-lightbox-item data-wide="true" data-full="assets/ingame-settings-finishes.webp" data-name="Finishes &amp; motion settings" data-meta="BaseLib menu · Reduced Motion and per-context intensity">
+              <img src="assets/ingame-settings-finishes.webp" alt="In-game BaseLib settings menu for FullArtSpire showing FinishAssignment, SingleFinish, EffectFollowPointer, ReducedMotion and per-context intensity sliders" width="1440" height="810" loading="lazy" decoding="async">
+              <span class="shot-zoom" aria-hidden="true">Zoom</span>
+            </button>
+            <figcaption class="shot-meta"><span class="ba-title">Finishes &amp; motion</span><span class="ba-sub">BaseLib menu · Tunable sliders</span></figcaption>
+          </figure>
         </div>
       </div>
     </section>
 
-    <!-- h (continued). Optional Trailer (hidden until youtubeVideoId is set in script.js) -->
-    <section id="trailer" class="section" hidden>
-      <div class="container">
+    <!-- Optional trailer (hidden until youtubeVideoId is set in script.js) -->
+    <section id="trailer" class="wrap section" hidden>
+      <div class="panel panel-ink">
         <div class="section-head">
-          <p class="section-eyebrow">Video</p>
+          <p class="sticker sticker-yellow">Video</p>
           <h2>Trailer</h2>
-          <p class="section-lead">Embedded via YouTube privacy-enhanced mode (<code>youtube-nocookie.com</code>).</p>
+          <p class="section-small">Embedded through YouTube's privacy-enhanced mode (<code>youtube-nocookie.com</code>).</p>
         </div>
         <div id="trailer-embed" class="trailer-frame"></div>
       </div>
     </section>
 
-    <!-- i. For mod authors -->
-    <section id="mod-authors" class="section">
-      <div class="container split-grid">
-        <div>
-          <p class="section-eyebrow">Pack Format v2</p>
-          <h2>For Mod Authors</h2>
-          <p class="section-lead">
-            Other mods can ship full art for their own cards without touching Full Art Spire's folder. Drop a pack under <code>full_art/&lt;pack&gt;/pack.json</code> inside your mod — or in the player's <code>full_art_spire/packs/</code> directory — and match cards by their full .NET <code>runtime_model</code> type name.
-          </p>
-          <ul class="feature-list">
-            <li>JSON Schema (<code>docs/pack.schema.json</code>) provides editor completion and inline errors.</li>
+    <!-- For mod authors -->
+    <section id="mod-authors" class="wrap section">
+      <div class="panel panel-split" style="--c: var(--green)">
+        <div class="section-head">
+          <p class="sticker sticker-ink">Pack format v2</p>
+          <h2>Bring your own cards.</h2>
+          <p class="section-lead">Other mods can ship full art for their own cards without touching Full Art Spire's folder. Put a pack under <code>full_art/&lt;pack&gt;/pack.json</code> inside your mod (or, for a player's own packs, under <code>user://full_art_spire/packs/</code> in the game's user data folder) and match cards by their full .NET <code>runtime_model</code> type name.</p>
+          <ul class="tick-list">
+            <li>A JSON Schema (<code>docs/pack.schema.json</code>) gives editor completion and inline errors.</li>
             <li><code>tools/validate_pack.py</code> checks manifest fields, confined paths, layers and GPU textures.</li>
-            <li>Optional <code>requires</code> and <code>min_game_version</code> gates skip packs cleanly when a dependency is absent.</li>
+            <li>Optional <code>requires</code> and <code>min_game_version</code> gates skip packs cleanly when a dependency is missing.</li>
           </ul>
           <div class="btn-row">
-            <a class="btn" href="https://github.com/tzii/full-art-spire/blob/main/docs/pack-format.md" target="_blank" rel="noopener noreferrer">
-              Read Pack Format Docs
-            </a>
-            <a class="btn" href="https://github.com/tzii/full-art-spire" target="_blank" rel="noopener noreferrer">
-              Schema &amp; Validator on GitHub
-            </a>
+            <a class="pill pill-ink" href="https://github.com/tzii/full-art-spire/blob/main/docs/pack-format.md" target="_blank" rel="noopener noreferrer">Read the pack format</a>
+            <a class="pill" href="https://github.com/tzii/full-art-spire" target="_blank" rel="noopener noreferrer">Schema &amp; validator on GitHub</a>
           </div>
         </div>
 
-        <div class="code-panel" aria-label="Example pack.json manifest">
+        <div class="code-panel" aria-label="Example pack.json manifest" data-reveal style="--r: 1.5deg">
           <div class="code-panel-bar">
+            <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
             <span>full_art/my_character/pack.json</span>
-            <span>Pack Format v2</span>
           </div>
           <pre><code>{
-  "format": "full_art_pack",
-  "format_version": 2,
-  "id": "author.my_character",
-  "name": "My Character",
-  "version": "1.0.0",
-  "requires": [{ "mod": "my_character_mod" }],
-  "cards": [
+  <b>"format"</b>: <s>"full_art_pack"</s>,
+  <b>"format_version"</b>: <u>2</u>,
+  <b>"id"</b>: <s>"author.my_character"</s>,
+  <b>"name"</b>: <s>"My Character"</s>,
+  <b>"version"</b>: <s>"1.0.0"</s>,
+  <b>"requires"</b>: [{ <b>"mod"</b>: <s>"my_character_mod"</s> }],
+  <b>"cards"</b>: [
     {
-      "runtime_model": "MyMod.Cards.ExampleCard",
-      "art": "art/example_card.png",
-      "layers": {
-        "background": "layers/example_card_bg.png",
-        "foreground_mask": "layers/example_card_mask.png"
+      <b>"runtime_model"</b>: <s>"MyMod.Cards.ExampleCard"</s>,
+      <b>"art"</b>: <s>"art/example_card.png"</s>,
+      <b>"layers"</b>: {
+        <b>"background"</b>: <s>"layers/example_card_bg.png"</s>,
+        <b>"foreground_mask"</b>: <s>"layers/example_card_mask.png"</s>
       }
     }
   ]
@@ -715,79 +814,80 @@
       </div>
     </section>
 
-    <!-- j. How it's made -->
-    <section id="how-its-made" class="section">
-      <div class="container">
-        <div class="section-head">
-          <p class="section-eyebrow">Transparency &amp; Notes</p>
-          <h2>How It's Made</h2>
-          <p class="section-lead">
-            Clear details on how the full-art extensions, depth layers and packaged files are produced.
-          </p>
+    <!-- How it's made -->
+    <section id="how-its-made" class="wrap section">
+      <div class="section-head section-head-plain">
+        <p class="sticker sticker-yellow">Transparency</p>
+        <h2>How it's made.</h2>
+        <p class="section-lead">How the full-art extensions, depth layers and packaged files are produced.</p>
+      </div>
+      <div class="notes">
+        <div class="note" style="--c: var(--yellow); --r: -1.5deg" data-reveal>
+          <h3>AI-generated extensions &amp; backgrounds</h3>
+          <p>The full-art extensions and depth-layer backgrounds are AI-generated (OpenAI image models), starting from Mega Crit's original card art and reviewed against it.</p>
         </div>
+        <div class="note" style="--c: var(--pink); --r: 1deg" data-reveal>
+          <h3>Re-encoded release images</h3>
+          <p>Released images are re-encoded to save space, which removes the C2PA Content Credentials the image generator embedded.</p>
+        </div>
+        <div class="note" style="--c: var(--blue); --r: -0.5deg" data-reveal>
+          <h3>Cut-outs &amp; edge artifacts</h3>
+          <p>Some foreground cut-outs may show small edge artifacts. If you spot one in game, press <kbd>F8</kbd> while hovering the card to save a local report and share it with a screenshot.</p>
+        </div>
+        <div class="note" style="--c: var(--green); --r: 1.5deg" data-reveal>
+          <h3>Game version coverage</h3>
+          <p>Made for Slay the Spire 2 v0.107.1 and the v0.113.1 public beta; 50 newer beta cards keep their original art for now.</p>
+        </div>
+      </div>
+    </section>
 
-        <div class="notes-grid">
-          <div class="note-card">
-            <h3>AI-generated extensions &amp; backgrounds</h3>
-            <p>
-              The full-art extensions and depth-layer backgrounds are AI-generated (OpenAI image models), starting from Mega Crit's original card art and reviewed against it.
-            </p>
-          </div>
-          <div class="note-card">
-            <h3>Re-encoded release images</h3>
-            <p>
-              Released images are re-encoded to save space, which removes the C2PA Content Credentials the image generator embedded.
-            </p>
-          </div>
-          <div class="note-card">
-            <h3>Cutouts &amp; edge artifacts</h3>
-            <p>
-              Some foreground cutouts may show small edge artifacts. If you spot one in game, press <kbd>F8</kbd> while hovering the card to save a local report and share it with a screenshot.
-            </p>
-          </div>
-          <div class="note-card">
-            <h3>Game version coverage</h3>
-            <p>
-              Made for Slay the Spire 2 v0.107.1 and the v0.113.1 public beta; 50 newer beta cards keep their original art for now.
-            </p>
-          </div>
+    <!-- Closing call to action -->
+    <section class="wrap section">
+      <div class="finale">
+        <div class="hero-burst finale-burst" aria-hidden="true"></div>
+        <p class="finale-kicker">Ready when you are</p>
+        <p class="finale-title">Deal yourself<br>a prettier hand.</p>
+        <div class="btn-row btn-row-center">
+          <a class="pill pill-big pill-ink" href="https://github.com/tzii/full-art-spire/releases/latest" target="_blank" rel="noopener noreferrer" data-confetti>
+            Download v0.4.0
+            <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v12m0 0-5-5m5 5 5-5M5 20h14"/></svg>
+          </a>
+          <a class="pill pill-big" href="https://github.com/tzii/full-art-spire" target="_blank" rel="noopener noreferrer">Source on GitHub</a>
         </div>
       </div>
     </section>
   </main>
 
-  <!-- k. Footer -->
   <footer class="site-footer">
-    <div class="container footer-inner">
-      <p class="footer-legal">
-        Unofficial fan project, not affiliated with or endorsed by Mega Crit. Slay the Spire 2 art, characters and designs &copy; Mega Crit. BaseLib by Alchyr. Code under the MIT License, which covers no artwork.
-      </p>
+    <div class="wrap footer-inner">
+      <p class="footer-legal">Unofficial fan project, not affiliated with or endorsed by Mega Crit. Slay the Spire 2 art, characters and designs &copy; Mega Crit. BaseLib by Alchyr. Code under the MIT License, which covers no artwork.</p>
       <div class="footer-meta">
-        <span>By tzii</span>
+        <span>Made by tzii</span>
         <a href="https://github.com/tzii/full-art-spire" target="_blank" rel="noopener noreferrer">GitHub</a>
         <a href="https://github.com/tzii/full-art-spire/releases/latest" target="_blank" rel="noopener noreferrer">Releases</a>
-        <a href="https://github.com/tzii/full-art-spire/blob/main/docs/pack-format.md" target="_blank" rel="noopener noreferrer">Pack Format</a>
+        <a href="https://github.com/tzii/full-art-spire/blob/main/docs/pack-format.md" target="_blank" rel="noopener noreferrer">Pack format</a>
       </div>
     </div>
   </footer>
 
-  <!-- Accessible Card Lightbox -->
   <dialog id="card-lightbox" class="lightbox" aria-labelledby="lightbox-title" aria-describedby="lightbox-sub">
     <div class="lightbox-shell">
       <div class="lightbox-bar">
-        <div class="lightbox-title-wrap">
+        <div>
           <h3 id="lightbox-title" class="lightbox-title">Card</h3>
           <p id="lightbox-sub" class="lightbox-sub"></p>
         </div>
-        <button type="button" id="lightbox-close" class="lightbox-close" aria-label="Close card preview">&times;</button>
+        <button type="button" id="lightbox-close" class="lightbox-close" aria-label="Close card preview">
+          <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
       </div>
       <div class="lightbox-body">
         <img id="lightbox-img" class="lightbox-img" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt="">
       </div>
       <div class="lightbox-nav">
-        <button type="button" id="lightbox-prev" class="btn">&#8592; Previous</button>
+        <button type="button" id="lightbox-prev" class="pill">&#8592; Previous</button>
         <span id="lightbox-counter" class="lightbox-counter" aria-live="polite"></span>
-        <button type="button" id="lightbox-next" class="btn">Next &#8594;</button>
+        <button type="button" id="lightbox-next" class="pill">Next &#8594;</button>
       </div>
     </div>
   </dialog>

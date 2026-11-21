@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Full Art Spire press image</title>
+<!--
+  Template for the Workshop thumbnail, the social card and the 1920x1080 banner.
+  render_press.mjs opens it as press.html?layout=square|og|banner at the exact pixel size
+  and screenshots it. Open it in a browser with the same query to preview a layout.
+-->
+<style>
+  @font-face {
+    font-family: "Mona Sans";
+    src: url("../fonts/mona-sans.woff2") format("woff2");
+    font-weight: 200 900;
+    font-stretch: 75% 125%;
+  }
+  :root {
+    --on: #17120f; --paper: #fbf3e4;
+    --pink: #ff7cc0; --yellow: #ffd23f; --blue: #6b9bff; --green: #4fd68a;
+    --u: 1px; /* layout scale unit */
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: var(--W); height: var(--H); overflow: hidden; }
+  body {
+    position: relative;
+    background: var(--yellow);
+    font-family: "Mona Sans", system-ui, sans-serif;
+    color: var(--on);
+    -webkit-font-smoothing: antialiased;
+  }
+  .rays {
+    position: absolute; left: var(--rx); top: var(--ry);
+    width: calc(var(--W) * 3); aspect-ratio: 1; translate: -50% -50%;
+    background: repeating-conic-gradient(from 3deg, rgb(255 255 255 / .5) 0deg 8deg, transparent 8deg 20deg);
+    -webkit-mask: radial-gradient(circle, #000 4%, rgb(0 0 0 / .65) 30%);
+  }
+  .frame { position: absolute; inset: calc(14 * var(--u)); border: calc(5 * var(--u)) solid var(--on); border-radius: calc(30 * var(--u)); }
+
+  .wordmark {
+    position: absolute; left: var(--tx); top: var(--ty);
+    font-size: var(--ts); font-weight: 900; font-stretch: 112%;
+    line-height: .84; letter-spacing: -.055em;
+  }
+  .wordmark span { display: block; white-space: nowrap; }
+  .wordmark .mark { position: relative; width: fit-content; z-index: 0; margin: .03em 0 .05em .04em; }
+  .wordmark .mark::before {
+    content: ""; position: absolute; z-index: -1; inset: 12% -.2em 4% -.1em;
+    background: var(--pink); border: calc(5 * var(--u)) solid var(--on); border-radius: .14em;
+    box-shadow: 0 calc(8 * var(--u)) 0 var(--on); transform: rotate(-2.5deg);
+  }
+
+  .sticker {
+    position: absolute; padding: .32em .8em;
+    border: calc(4 * var(--u)) solid var(--on); border-radius: 999px;
+    font-weight: 850; font-stretch: 110%; text-transform: uppercase; letter-spacing: .01em; line-height: 1.1; white-space: nowrap;
+    box-shadow: 0 calc(5 * var(--u)) 0 var(--on);
+  }
+  .s1 { background: var(--pink); }
+  .s2 { background: var(--blue); }
+  .s3 { background: var(--on); color: var(--paper); box-shadow: none; }
+
+  .fan { position: absolute; left: var(--fx); bottom: var(--fy); width: 0; height: 0; }
+  .card {
+    position: absolute; left: 0; bottom: 0;
+    width: var(--cw); aspect-ratio: 2 / 3;
+    border: calc(5 * var(--u)) solid var(--on); border-radius: calc(20 * var(--u));
+    overflow: hidden; background: #241d2c;
+    box-shadow: 0 calc(10 * var(--u)) 0 var(--on);
+    transform-origin: 50% 130%;
+    transform: translateX(calc(-50% + var(--o) * var(--cw) * var(--gap))) translateY(calc(var(--o) * var(--o) * 10 * var(--u))) rotate(calc(var(--o) * var(--rot)));
+    z-index: calc(10 - var(--o) * var(--o));
+  }
+  .card.big { width: calc(var(--cw) * 1.14); z-index: 20; }
+  .card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* ---- Square 864x864 (Steam Workshop preview) ---- */
+  body[data-layout="square"] {
+    --W: 864px; --H: 864px; --u: 1px;
+    --rx: 70%; --ry: 92%;
+    --tx: 44px; --ty: 62px; --ts: 150px;
+    --fx: 600px; --fy: 40px; --cw: 250px; --gap: .5; --rot: 9deg;
+  }
+  body[data-layout="square"] .s1 { right: 44px; top: 70px; font-size: 34px; rotate: 8deg; }
+  body[data-layout="square"] .s2 { right: 60px; top: 160px; font-size: 26px; rotate: -6deg; }
+  body[data-layout="square"] .s3 { left: 48px; bottom: 44px; font-size: 19px; rotate: -3deg; z-index: 40; }
+
+  /* ---- Social card 1200x630 ---- */
+  body[data-layout="og"] {
+    --W: 1200px; --H: 630px; --u: 1px;
+    --rx: 76%; --ry: 70%;
+    --tx: 64px; --ty: 74px; --ts: 148px;
+    --fx: 880px; --fy: 30px; --cw: 220px; --gap: .5; --rot: 8deg;
+  }
+  body[data-layout="og"] .s1 { left: 520px; top: 54px; font-size: 30px; rotate: -7deg; z-index: 40; }
+  body[data-layout="og"] .s2 { right: 52px; top: 64px; font-size: 24px; rotate: 6deg; }
+  body[data-layout="og"] .s3 { left: 66px; bottom: 48px; font-size: 18px; rotate: -2deg; }
+
+  /* ---- Banner 1920x1080 (Nexus header, video thumbnail) ---- */
+  body[data-layout="banner"] {
+    --W: 1920px; --H: 1080px; --u: 1.6px;
+    --rx: 74%; --ry: 72%;
+    --tx: 110px; --ty: 140px; --ts: 250px;
+    --fx: 1500px; --fy: 60px; --cw: 340px; --gap: .5; --rot: 8deg;
+  }
+  body[data-layout="banner"] .s1 { left: 860px; top: 100px; font-size: 50px; rotate: -7deg; z-index: 40; }
+  body[data-layout="banner"] .s2 { right: 90px; top: 110px; font-size: 40px; rotate: 6deg; }
+  body[data-layout="banner"] .s3 { left: 112px; bottom: 86px; font-size: 30px; rotate: -2deg; }
+</style>
+</head>
+<body data-layout="square">
+  <div class="rays"></div>
+
+  <div class="fan">
+    <div class="card" style="--o:-2"><img src="../assets/cards/full/regent-meteor_shower.webp" alt=""></div>
+    <div class="card" style="--o:-1"><img src="../assets/cards/full/necrobinder-forbidden_grimoire.webp" alt=""></div>
+    <div class="card big" style="--o:0"><img src="../assets/cards/full/fool-divine_shot.webp" alt=""></div>
+    <div class="card" style="--o:1"><img src="../assets/cards/full/colorless-hand_of_greed.webp" alt=""></div>
+    <div class="card" style="--o:2"><img src="../assets/cards/full/silent-wraith_form.webp" alt=""></div>
+  </div>
+
+  <h1 class="wordmark"><span>Full</span><span class="mark">Art</span><span>Spire</span></h1>
+  <div class="sticker s1">667 cards!</div>
+  <div class="sticker s2">+ the Fool</div>
+  <div class="sticker s3">Slay the Spire 2 mod</div>
+  <div class="frame"></div>
+
+  <script>
+    const layout = new URLSearchParams(location.search).get("layout");
+    if (layout) document.body.dataset.layout = layout;
+  </script>
+</body>
+</html>

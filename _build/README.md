@@ -47,14 +47,33 @@ const SITE_CONFIG = {
 - Leaving `steamWorkshopUrl` or `nexusModsUrl` blank keeps that button disabled with a **Coming soon** badge.
 - Leaving `youtubeVideoId` blank keeps the **Trailer** section hidden and loads nothing from YouTube. When filled in, the page embeds `https://www.youtube-nocookie.com/embed/<id>`.
 
-## Swapping In an In-Game Screenshot
+## In-Game Captures
 
-In `../index.html`, find the `<div class="screenshot-slot">` inside the `#pack-switches` section and replace it with your real in-game capture (recommended: WebP around 1200 px wide, quality ~82, saved under `../assets/settings-screenshot.webp`, with descriptive `alt` text and `loading="lazy"`).
+Real v0.113.1 captures sit under `../assets/ingame-*.webp` (the BaseLib Card packs settings, the live pack-on/pack-off combat comparison pair, and the six-shot in-game gallery) alongside the silent 720p gameplay reel at `../assets/ingame-reel.mp4` (poster `../assets/ingame-reel-poster.webp`). `build_media.py` does not touch `ingame-*` files.
 
 ## Press / Store Images
 
-Generated into `../press/` (not hotlinked by the page, ready to upload to Nexus Mods, Steam Workshop and YouTube):
+The Workshop thumbnail, the social card and the banner are drawn by `press.html`
+(the site's fonts, stickers and card art) and screenshotted by `render_press.mjs`
+with a local headless Chrome or Edge. Node 22+ is enough; nothing is downloaded.
 
-- `press/hero-1920x1080.jpg` — 1920×1080 hero banner (Nexus header, YouTube thumbnail)
-- `press/gallery-1-common.jpg` … `press/gallery-4-ancient.jpg` — 1600×900 tier showcase strips
-- `press/workshop-preview.png` — square PNG (≥ 640 px, under 1,000,000 bytes) including a Fool card
+```bash
+node _build/render_press.mjs            # all three
+node _build/render_press.mjs --only square
+```
+
+- `press/workshop-preview.png`: 864×864 PNG, Steam Workshop preview, kept under 1,000,000 bytes; it includes a Fool card
+- `assets/og-card.jpg`: 1200×630 Open Graph / Twitter card
+- `press/hero-1920x1080.jpg`: 1920×1080 banner (Nexus header, video thumbnail)
+
+`build_media.py` also writes these three files in its older style, so run
+`render_press.mjs` after it. Open `press.html?layout=square|og|banner` in a
+browser to preview a layout while editing it.
+
+`press/gallery-1-common.jpg` … `press/gallery-4-ancient.jpg` (1600×900 tier
+strips) still come from `build_media.py`. Nothing under `press/` is linked from the page.
+
+## Fonts
+
+`fonts/mona-sans.woff2` is Mona Sans (variable weight and width) under the SIL
+Open Font License; the licence sits next to it in `fonts/OFL.txt`.
