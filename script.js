@@ -6,8 +6,8 @@
  * - youtubeVideoId: optional 11-character YouTube video ID; leave empty to hide the Trailer section.
  */
 const SITE_CONFIG = {
-  steamWorkshopUrl: "",
-  nexusModsUrl: "",
+  steamWorkshopUrl: "https://steamcommunity.com/sharedfiles/filedetails/?id=3843203948",
+  nexusModsUrl: "https://www.nexusmods.com/slaythespire2/mods/1607",
   youtubeVideoId: "",
 };
 
