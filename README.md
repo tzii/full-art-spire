@@ -6,7 +6,9 @@ or balance changes.
 
 Players: get the mod from the Steam Workshop or Nexus Mods, or download
 `FullArtSpire-<version>.zip` from this repository's
-[Releases](https://github.com/tzii/full-art-spire/releases). It needs
+[Releases](https://github.com/tzii/full-art-spire/releases). Interactive card
+previews, in-game footage and screenshots are on the
+[showcase site](https://tzii.github.io/full-art-spire/). It needs
 [BaseLib](https://github.com/Alchyr/BaseLib-StS2). 0.4.0 covers all 577 cards of
 the main game and the Fool's 90 from the public beta.
 
@@ -16,12 +18,12 @@ code home. The artwork is made in a separate, private art repository; packs
 arrive here as build inputs, so this repository holds no card art. Releases
 attach the complete mod, every card included.
 
-Status: 0.4.0 in preparation. Tried in game (v0.113.1 beta): the rename, with
-detection of an installed 0.3.x and import of its settings, and every pack,
-including the Fool's. Not yet tried in game: switching packs without a restart,
-and packs from other mods or the player's folder (pack format v2). Whether
-other mods' cards render like the base game's still needs a pilot. See
-[docs/roadmap.md](docs/roadmap.md).
+Status: 0.4.0 release candidate. Tried in game (v0.113.1 beta): the rename, with
+detection of an installed 0.3.x and import of its settings, every pack
+(including the Fool's), and switching packs live without a restart. Not yet
+tried in game: loading from the Steam Workshop folder, and packs from other
+mods or the player's folder (pack format v2). Whether other mods' cards render
+like the base game's still needs a pilot. See [docs/roadmap.md](docs/roadmap.md).
 
 ## Layout
 

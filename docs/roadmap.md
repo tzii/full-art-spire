@@ -41,7 +41,7 @@
   **Done in code (2026-11-20), nothing uploaded yet:** `package_mod.py
   --workshop` stages the workspace for Mega Crit's uploader from `store/`
   (text, settings with BaseLib's item 3737335127 as a dependency, an 864 px
-  preview at 919 KB). How the game loads the mod from the Workshop folder is
+  preview at 402 KB). How the game loads the mod from the Workshop folder is
   untried (`docs/release.md`, step 4.7).
 
 ## Art coverage
@@ -76,9 +76,10 @@ that already have full art, whose extensions may need a redo.
   art (45 cards in the 0.3.4 packs). **Schema done (2026-11-20):**
   `docs/pack.schema.json`, tested against the validator's rules. `init` and
   `build` remain.
-- Apply pack switches without a restart. **Done in code (2026-11-20), not yet
-  tried in game:** the card table is re-planned from the packs found at
-  startup and cards on screen reload (`docs/architecture.md`, Settings).
+- Apply pack switches without a restart. **Done (2026-11-20); verified in game
+  (2026-11-21) on v0.113.1 beta:** the card table is re-planned from the packs
+  found at startup and cards on screen reload mid-combat (`docs/architecture.md`,
+  Settings).
 - Pack-author guide.
 - Pilot: one modded character, with its author's permission.
 
