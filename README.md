@@ -6,11 +6,13 @@ or balance changes.
 
 Players: get the mod from the Steam Workshop or Nexus Mods, or download
 `FullArtSpire-<version>.zip` from this repository's
-[Releases](https://github.com/tzii/full-art-spire/releases). Interactive card
-previews, in-game footage and screenshots are on the
+[Releases](https://github.com/tzii/full-art-spire/releases). Watch the
+[30-second trailer](https://www.youtube.com/watch?v=L7VRYHN1NZk) or browse
+interactive card previews, in-game footage and screenshots on the
 [showcase site](https://tzii.github.io/full-art-spire/). It needs
-[BaseLib](https://github.com/Alchyr/BaseLib-StS2). 0.4.0 covers all 577 cards of
-the main game and the Fool's 90 from the public beta.
+[BaseLib](https://github.com/Alchyr/BaseLib-StS2). 0.4.1 covers every card: all
+577 of the main game and all 140 new cards of the v0.113.1 public beta (the
+Fool's 90 and 50 more).
 
 Until 0.3.4 the mod was **Full Art Card Packs** (`full_art_card_packs`). From
 0.4.0 it is **Full Art Spire** (`full_art_spire`), and this repository is its
@@ -18,7 +20,9 @@ code home. The artwork is made in a separate, private art repository; packs
 arrive here as build inputs, so this repository holds no card art. Releases
 attach the complete mod, every card included.
 
-Status: 0.4.0 release candidate. Tried in game (v0.113.1 beta): the rename, with
+Status: 0.4.0 is released. 0.4.1 adds full art for the beta's other 50 new
+cards; they are agent-reviewed only and not yet checked in game. Tried in game
+for 0.4.0 (v0.113.1 beta): the rename, with
 detection of an installed 0.3.x and import of its settings, every pack
 (including the Fool's), and switching packs live without a restart. Not yet
 tried in game: loading from the Steam Workshop folder, and packs from other
@@ -85,8 +89,9 @@ Original Slay the Spire 2 artwork, characters and designs © Mega Crit. This is
 an unofficial fan project, not affiliated with or endorsed by Mega Crit.
 BaseLib by Alchyr.
 
-The full-art extensions and the depth-layer backgrounds are AI-generated (OpenAI
-image models), starting from Mega Crit's original card art. The released PNGs
+The full-art extensions and the depth-layer backgrounds are AI-generated with
+image models on various websites (OpenAI's, Google's Nano Banana 2.1 in Google
+Flow and others), starting from Mega Crit's original card art. The released PNGs
 are re-encoded to save space, which removes the C2PA Content Credentials the
 generator embedded; `png-reencode.audit` in the mod folder lists every such
 file and the hash it had before.

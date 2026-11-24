@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.4.0 - unreleased
+## 0.4.1 - every beta card
+
+- Full art with depth layers for the 50 new cards of the v0.113.1 public beta that kept their original art in 0.4.0: the 22 tarot cards, Amnesia, Joy and The Shot, five event cards, and the new cards of every character plus colorless and status. Every card of the game and the beta now has full art.
+- These 50 are agent-reviewed only and not yet checked in game.
+- The new cards' extensions and backgrounds are AI-generated with Google's Nano Banana 2.1 in Google Flow and other image models on public websites, starting from Mega Crit's original card art.
+
+## 0.4.0
 
 - Full art for all 90 cards of the Fool (public beta). On the beta, 50 other new cards keep their original art for now.
 - Now on the Steam Workshop too, with BaseLib as a required item.

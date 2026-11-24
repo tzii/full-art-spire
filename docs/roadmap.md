@@ -48,8 +48,9 @@
 
 Measured 2026-11-20 against the art repo's v0.113.1 roster export (717 runtime
 models, 716 public): the 0.4.0 packs cover 666. `Scare` (in the packs) no
-longer exists in v0.113.1; its entry is inert. These 50 new cards have no full
-art yet, and making it is art repo work, planned for 0.4.1:
+longer exists in v0.113.1; its entry is inert. The other 50 cards ship in
+0.4.1 (built 2026-11-24, agent-reviewed, in-game check pending), as the v2 pack
+`megacrit.beta_v0113`:
 
 - token (25): the 22 Major Arcana tarot cards (`TheFool` to `TheWorld`, with
   `Death`, `Judgement`, `Justice`, `Strength`, `Temperance` and
@@ -125,5 +126,5 @@ that already have full art, whose extensions may need a redo.
 
 ## Open decisions
 
-- When the 50 new v0.113 cards (Art coverage) ship: 0.4.1, or when the beta
-  reaches the main branch.
+- ~~When the 50 new v0.113 cards (Art coverage) ship~~: decided 2026-11-24,
+  0.4.1.

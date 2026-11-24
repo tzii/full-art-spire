@@ -144,7 +144,9 @@ and say that the full-art extensions and backgrounds are AI-generated from the
 original card art and that the release strips the images' C2PA Content
 Credentials to save space. The store files in `store/` already do.
 
-When a release ships art extended with Google's image model (the beta v0.113.1
-cards made with Nano Banana 2.1 in Google Flow), name Google's model next to
-OpenAI's in the README, the store text and the release notes. Re-encoding
-removes the C2PA manifest, but Google's SynthID watermark stays in the pixels.
+Credit the image models generally: the art is AI-generated with image models on
+various websites (OpenAI's, Google's Nano Banana 2.1 in Google Flow and others).
+The beta v0.113.1 cards also used models the maintainer ran by hand on public
+sites; the art repo's run evidence keeps each image's maker where the file
+shows it. Re-encoding removes C2PA manifests, but Google's SynthID watermark
+stays in the pixels.
