@@ -47,11 +47,12 @@
 ## Art coverage
 
 Measured 2026-11-20 against the art repo's v0.113.1 roster export (717 runtime
-models, 716 public): the 0.4.0 packs cover 666. `Scare` (in the packs) no
-longer exists in v0.113.1; its entry is inert. The other 50 cards ship in
-0.4.1 (built 2026-11-24, agent-reviewed, in-game check pending), as the v2 pack
-`megacrit.beta_v0113`:
+models, 716 public) and updated 2026-11-26 for v0.114.0 (718 runtime models,
+717 public): the 0.4.0 packs cover 666 (`Scare` and `RapidShot` are inert on
+v0.114.0). The other 52 cards ship in 0.4.1 (agent-reviewed, in-game check
+pending), as the v2 pack `megacrit.beta_v0113`:
 
+- fool (2, v0.114.0): `TwinShot`, `Optimism`;
 - token (25): the 22 Major Arcana tarot cards (`TheFool` to `TheWorld`, with
   `Death`, `Judgement`, `Justice`, `Strength`, `Temperance` and
   `WheelOfFortune`), plus `Amnesia`, `Joy` and `TheShot`;

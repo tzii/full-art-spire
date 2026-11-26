@@ -2,6 +2,7 @@ using System.Reflection;
 using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Screens.CardLibrary;
@@ -294,5 +295,38 @@ internal static class CardLibraryGridFilterWithSortPatch
     {
         CardRenderRaritySpoofPatch.EndLibraryRarityOverride(__state);
         return __exception;
+    }
+}
+
+// Vanilla STS2 has no Ancient-rarity Quest cards, so its ancient_text_bg_quest
+// sprite is a placeholder reading "NOPE". Status and Curse already fall back to
+// the Skill text backing in CardModel.AncientTextBgPath; do the same for Quest
+// cards while we temporarily spoof their rarity for the full-art layout.
+[HarmonyPatch(typeof(CardModel), "AncientTextBg", MethodType.Getter)]
+internal static class QuestAncientTextBgPatch
+{
+    private const string SkillAncientTextBg = "atlases/compressed_atlas.sprites/ancient_text_bg_skill.tres";
+
+    internal static bool ShouldUseSkillFallback(bool spoofing, CardType type, CardRarity realRarity)
+        => spoofing && type == CardType.Quest && realRarity != CardRarity.Ancient;
+
+    [HarmonyPrefix]
+    private static bool Prefix(CardModel __instance, ref Texture2D __result)
+    {
+        if (!ShouldUseSkillFallback(CardRenderRaritySpoofPatch.IsSpoofingForCardReload, __instance.Type,
+            CardRenderRaritySpoofPatch.ReadRealRarity(__instance)))
+        {
+            return true;
+        }
+
+        Texture2D? fallback = ResourceLoader.Load<Texture2D>(
+            ImageHelper.GetImagePath(SkillAncientTextBg), null, ResourceLoader.CacheMode.Reuse);
+        if (fallback is null)
+        {
+            return true;
+        }
+
+        __result = fallback;
+        return false;
     }
 }

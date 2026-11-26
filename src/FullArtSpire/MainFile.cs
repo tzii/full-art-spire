@@ -25,6 +25,8 @@ public static class MainFile
 
         try
         {
+            // The mod list shows the title from this text, before the page is built.
+            SettingsText.Install();
             var modConfig = new FullArtModConfig();
             GD.Print($"[{ModId}] Created FullArtModConfig instance");
             modConfig.ConfigChanged += (_, _) => OnSettingsChanged();

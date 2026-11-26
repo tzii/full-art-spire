@@ -4,6 +4,7 @@ using Godot;
 
 namespace FullArtSpire;
 
+[ConfigHoverTipsByDefault]
 public class FullArtModConfig : SimpleModConfig
 {
     // Ids of packs the player switched off, comma-separated and sorted. Packs are
@@ -18,68 +19,111 @@ public class FullArtModConfig : SimpleModConfig
     [ConfigIgnoreRestoreDefaults]
     public static bool LegacyPackSelectionImported { get; set; } = false;
 
+    // Rows appear in declaration order; [ConfigSection] starts a group. Labels,
+    // group titles and hover tips are in SettingsText. Saved settings are keyed
+    // by property name, so names stay fixed whatever the order.
+
+    [ConfigSection("DepthSection")]
     public static bool EnableLayeredCards { get; set; } = true;
 
+    [ConfigVisibleIf(nameof(EnableLayeredCards))]
+    [ConfigSlider(0, 1, 0.05, Format = "{0:P0}")]
+    public static float LayerDepth { get; set; } = 1f;
+
+    // How far the character follows the pointer; zero keeps it fixed.
+    [ConfigVisibleIf(nameof(EnableLayeredCards))]
+    [ConfigSlider(0, 1, 0.05, Format = "{0:P0}")]
+    public static float PortraitParallax { get; set; } = 0.5f;
+
+    // Shadow, rim light and background recession that separate the character.
+    [ConfigVisibleIf(nameof(EnableLayeredCards))]
+    [ConfigSlider(0, 1, 0.05, Format = "{0:P0}")]
+    public static float SubjectPop { get; set; } = 0.5f;
+
+    [ConfigSection("FinishesSection")]
+    public static bool EnableEffects { get; set; } = true;
+
+    // Subtle satin on commons, escalating to prismatic glints and an aura on the rarest.
+    [ConfigVisibleIf(nameof(EnableEffects))]
+    public static FinishAssignment FinishAssignment { get; set; } = FinishAssignment.RarityShowcase;
+
+    [ConfigVisibleIf(nameof(ShowSingleFinish))]
+    public static TrialFinish SingleFinish { get; set; } = TrialFinish.Foil;
+
+    [ConfigVisibleIf(nameof(ShowFinishSeed))]
+    [ConfigSlider(0, 999, 1, Format = "{0:F0}")]
+    public static int FinishSeed { get; set; } = 0;
+
+    // Applies to PackDefault only; the rarity showcase already tiers every card.
+    [ConfigVisibleIf(nameof(ShowRareFirst))]
+    public static bool RareFirstEffects { get; set; } = true;
+
+    // Finishes on the reviewed depth subject of every layered card.
+    [ConfigVisibleIf(nameof(EnableEffects))]
+    public static bool LayerSubjectFinishes { get; set; } = true;
+
+    // 1.0 is the designed look; lower values fade every finish together.
+    [ConfigVisibleIf(nameof(EnableEffects))]
+    [ConfigSlider(0, 1, 0.05, Format = "{0:P0}")]
+    public static float EffectIntensity { get; set; } = 1f;
+
+    [ConfigSection("FinishStrengthSection")]
+    [ConfigVisibleIf(nameof(EnableEffects))]
+    [ConfigSlider(0, 1, 0.05, Format = "{0:P0}")]
+    public static float GridIntensity { get; set; } = 0.5f;
+
+    [ConfigVisibleIf(nameof(EnableEffects))]
+    [ConfigSlider(0, 1, 0.05, Format = "{0:P0}")]
+    public static float HandIntensity { get; set; } = 0.8f;
+
+    [ConfigVisibleIf(nameof(EnableEffects))]
+    [ConfigSlider(0, 1, 0.05, Format = "{0:P0}")]
+    public static float FocusedIntensity { get; set; } = 1f;
+
+    [ConfigVisibleIf(nameof(EnableEffects))]
+    [ConfigSlider(0, 1, 0.05, Format = "{0:P0}")]
+    public static float RewardIntensity { get; set; } = 0.75f;
+
+    [ConfigSection("MotionSection")]
+    public static bool ReducedMotion { get; set; } = false;
+
+    [ConfigVisibleIf(nameof(ShowFinishMotion))]
+    public static bool EffectFollowPointer { get; set; } = true;
+
+    [ConfigVisibleIf(nameof(ShowFinishMotion))]
+    [ConfigSlider(0, 0.25, 0.01, Format = "{0:P0}")]
+    public static float GridMotion { get; set; } = 0.05f;
+
+    [ConfigVisibleIf(nameof(ShowFinishMotion))]
+    [ConfigSlider(0, 1, 0.05, Format = "{0:P0}")]
+    public static float FocusedMotion { get; set; } = 1f;
+
+    // Advanced: built by hand in a section that starts collapsed (SetupConfigUI).
+
     // Decode card art off the main thread; the native portrait shows until it is ready.
+    [ConfigHideInUI]
     public static bool BackgroundTextureLoading { get; set; } = true;
 
     // Use verified DDS variants. Turning this off prefers original PNGs where a
     // package still ships them; release packages carry only the DDS copy.
+    [ConfigHideInUI]
     public static bool GpuCompressedTextures { get; set; } = true;
 
     // F8 records the hovered card and current visual settings for local QA.
+    [ConfigHideInUI]
     public static bool EnableCardReports { get; set; } = true;
 
-    [ConfigSlider(0, 1, 0.05, Format = "{0:F2}")]
-    public static float LayerDepth { get; set; } = 1f;
+    internal static readonly string[] AdvancedSettings =
+        { nameof(BackgroundTextureLoading), nameof(GpuCompressedTextures), nameof(EnableCardReports) };
 
-    // How far the character follows the pointer; zero keeps it fixed.
-    [ConfigSlider(0, 1, 0.05, Format = "{0:F2}")]
-    public static float PortraitParallax { get; set; } = 0.5f;
+    private static bool ShowSingleFinish() => EnableEffects && FinishAssignment == FinishAssignment.SingleFinish;
 
-    // Shadow, rim light and background recession that separate the character.
-    [ConfigSlider(0, 1, 0.05, Format = "{0:F2}")]
-    public static float SubjectPop { get; set; } = 0.5f;
+    private static bool ShowFinishSeed() => EnableEffects
+        && FinishAssignment is FinishAssignment.StableRandom or FinishAssignment.ExperimentalMix;
 
-    public static bool EnableEffects { get; set; } = true;
+    private static bool ShowRareFirst() => EnableEffects && FinishAssignment == FinishAssignment.PackDefault;
 
-    // Finishes on the reviewed depth subject of every layered card.
-    public static bool LayerSubjectFinishes { get; set; } = true;
-
-    // 1.0 is the designed look; lower values fade every finish together.
-    [ConfigSlider(0, 1, 0.05, Format = "{0:F2}")]
-    public static float EffectIntensity { get; set; } = 1f;
-
-    // Applies to PackDefault only; the rarity showcase already tiers every card.
-    public static bool RareFirstEffects { get; set; } = true;
-
-    // Subtle satin on commons, escalating to prismatic glints and an aura on the rarest.
-    public static FinishAssignment FinishAssignment { get; set; } = FinishAssignment.RarityShowcase;
-    public static TrialFinish SingleFinish { get; set; } = TrialFinish.Foil;
-    public static bool EffectFollowPointer { get; set; } = true;
-
-    [ConfigSlider(0, 999, 1, Format = "{0:F0}")]
-    public static int FinishSeed { get; set; } = 0;
-
-    public static bool ReducedMotion { get; set; } = false;
-
-    [ConfigSlider(0, 1, 0.05, Format = "{0:F2}")]
-    public static float GridIntensity { get; set; } = 0.5f;
-
-    [ConfigSlider(0, 1, 0.05, Format = "{0:F2}")]
-    public static float HandIntensity { get; set; } = 0.8f;
-
-    [ConfigSlider(0, 1, 0.05, Format = "{0:F2}")]
-    public static float RewardIntensity { get; set; } = 0.75f;
-
-    [ConfigSlider(0, 1, 0.05, Format = "{0:F2}")]
-    public static float FocusedIntensity { get; set; } = 1f;
-
-    [ConfigSlider(0, 0.25, 0.01, Format = "{0:F2}")]
-    public static float GridMotion { get; set; } = 0.05f;
-
-    [ConfigSlider(0, 1, 0.05, Format = "{0:F2}")]
-    public static float FocusedMotion { get; set; } = 1f;
+    private static bool ShowFinishMotion() => EnableEffects && !ReducedMotion;
 
     private static string _parsedDisabledPacks = "";
     private static HashSet<string> _disabledPackIds = new(StringComparer.Ordinal);
@@ -118,7 +162,9 @@ public class FullArtModConfig : SimpleModConfig
 
     public override void SetupConfigUI(Control optionContainer)
     {
-        GenerateOptionsForAllProperties(optionContainer);
+        // Labels and hover tips come from the game's settings_ui table.
+        SettingsText.Install();
+        AddVersionLine(optionContainer);
         try
         {
             AddPackSection(optionContainer);
@@ -129,8 +175,31 @@ public class FullArtModConfig : SimpleModConfig
             GD.PushWarning($"[FullArtSpire] Could not add the pack switches: {ex}");
         }
 
+        GenerateOptionsForAllProperties(optionContainer);
+        AddAdvancedSection(optionContainer);
         AddRestoreDefaultsButton(optionContainer);
         SetupFocusNeighbors(optionContainer);
+    }
+
+    private void AddVersionLine(Control optionContainer)
+    {
+        var label = CreateRawLabelControl(VersionLine(), 24);
+        label.Name = "VersionLine";
+        // The card count follows the pack switches while the page is open.
+        EventHandler update = (_, _) =>
+        {
+            if (GodotObject.IsInstanceValid(label)) label.Text = VersionLine();
+        };
+        ConfigChanged += update;
+        label.TreeExiting += () => ConfigChanged -= update;
+        optionContainer.AddChild(label);
+    }
+
+    internal static string VersionLine()
+    {
+        int packs = FullArtPackRegistry.Packs.Count(pack => pack.SkipReason is null && !DisabledPackIds().Contains(pack.Id));
+        return $"Version {ModVersion.Current} · {FullArtPackRegistry.ActiveCardCount} cards with full art "
+            + $"from {packs} {(packs == 1 ? "pack" : "packs")}";
     }
 
     private void AddPackSection(Control optionContainer)
@@ -145,26 +214,55 @@ public class FullArtModConfig : SimpleModConfig
             return;
         }
 
-        optionContainer.AddChild(CreateSectionHeader("Card packs"));
-        optionContainer.AddChild(CreateRawLabelControl("Switching a pack on or off applies right away.", 24));
+        var section = CreateCollapsibleSection(SettingsText.PacksSection);
+        optionContainer.AddChild(section);
+        Control content = section.ContentContainer;
+        content.AddChild(CreateRawLabelControl(SettingsText.PacksIntro, 24));
         for (int i = 0; i < packs.Length; i++)
         {
             if (i > 0)
             {
-                optionContainer.AddChild(CreateDividerControl());
+                content.AddChild(CreateDividerControl());
             }
 
             var property = new PackToggleProperty(packs[i].Id);
-            AddPackRow(optionContainer, property, PackLabel(packs[i]).Replace("[", "[lb]"));
+            AddPackRow(content, property, packs[i]);
         }
     }
 
-    private void AddPackRow(Control optionContainer, PackToggleProperty property, string label)
+    private void AddPackRow(Control container, PackToggleProperty property, DiscoveredPack pack)
     {
         var tickbox = CreateRawTickboxControl(property);
+        string label = PackLabel(pack).Replace("[", "[lb]");
         var row = new BaseLib.Config.UI.NConfigOptionRow(ModPrefix, property.Name, CreateRawLabelControl(label, 28), tickbox);
         tickbox.ClearFocusNeighbors();
-        optionContainer.AddChild(row);
+        try
+        {
+            var (title, description) = SettingsText.AddPackTip(ModPrefix, pack);
+            row.AddCustomHoverTip(title, description);
+        }
+        catch (Exception ex)
+        {
+            GD.PushWarning($"[FullArtSpire] No hover tip for pack {pack.Id}: {ex.Message}");
+        }
+        container.AddChild(row);
+    }
+
+    // Rarely needed switches, in a group that starts collapsed.
+    private void AddAdvancedSection(Control optionContainer)
+    {
+        var section = CreateCollapsibleSection(SettingsText.AdvancedSection, collapsedByDefault: true);
+        optionContainer.AddChild(section);
+        Control content = section.ContentContainer;
+        for (int i = 0; i < AdvancedSettings.Length; i++)
+        {
+            if (i > 0)
+            {
+                content.AddChild(CreateDividerControl());
+            }
+
+            content.AddChild(GenerateOptionFromProperty(typeof(FullArtModConfig).GetProperty(AdvancedSettings[i])!));
+        }
     }
 
     internal static string PackLabel(DiscoveredPack pack)

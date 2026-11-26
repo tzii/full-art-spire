@@ -2,8 +2,10 @@
 
 ## 0.4.1 - every beta card
 
-- Full art with depth layers for the 50 new cards of the v0.113.1 public beta that kept their original art in 0.4.0: the 22 tarot cards, Amnesia, Joy and The Shot, five event cards, and the new cards of every character plus colorless and status. Every card of the game and the beta now has full art.
-- These 50 are agent-reviewed only and not yet checked in game.
+- Full art with depth layers for the 50 new cards of the v0.113.1 public beta that kept their original art in 0.4.0 (the 22 tarot cards, Amnesia, Joy and The Shot, five event cards, and the new cards of every character plus colorless and status), plus the two Fool cards added in v0.114.0 (Twin Shot and Optimism). Every card of the main game and the v0.113.1–v0.114.0 public beta now has full art.
+- Fix: full-art Quest cards (Lantern Key, Byrdonis Egg, Spoils Map, Dowsing) no longer show the game's placeholder "NOPE" text-box graphic behind their description.
+- Clearer settings page. Options sit in groups (Card packs, Depth, Finishes, Finish strength by screen, Motion, and a collapsed Advanced group), and every option explains itself when you hover it. Options that do nothing with the current choices are hidden, such as the single-finish picker unless Finish style is One finish for all. The page shows the mod version and how many cards have full art. Saved settings carry over unchanged.
+- The 52 beta cards are agent-reviewed only and not yet checked in game.
 - The new cards' extensions and backgrounds are AI-generated with Google's Nano Banana 2.1 in Google Flow and other image models on public websites, starting from Mega Crit's original card art.
 
 ## 0.4.0

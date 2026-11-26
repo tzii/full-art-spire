@@ -34,6 +34,9 @@ internal static class FullArtPackRegistry
     // Every pack found at the last load, including disabled and skipped ones.
     internal static IReadOnlyList<DiscoveredPack> Packs { get; private set; } = Array.Empty<DiscoveredPack>();
 
+    // Cards that show full art under the current pack switches.
+    internal static int ActiveCardCount => CardsByRuntimeModel.Count;
+
     internal static string PlayerPacksDirectory()
         => Path.Combine(OS.GetUserDataDir(), ModIdentity.UserDataFolder, "packs");
 

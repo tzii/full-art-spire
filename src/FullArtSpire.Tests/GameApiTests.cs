@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using Godot;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Screens.CardLibrary;
@@ -35,6 +36,14 @@ internal static class GameApiTests
 
         Require(typeof(CardModel).GetProperty("Rarity", Instance)?.GetMethod is { ReturnType: var rarity }
             && rarity == typeof(CardRarity), "CardModel.Rarity must remain a CardRarity getter");
+        Require(typeof(CardModel).GetProperty("Type", Instance)?.GetMethod is { ReturnType: var cardType }
+            && cardType == typeof(CardType), "CardModel.Type must remain a CardType getter");
+        Require(typeof(CardModel).GetProperty("AncientTextBg", Instance)?.GetMethod is { ReturnType: var ancientTextBg }
+            && typeof(Texture2D).IsAssignableFrom(ancientTextBg),
+            "CardModel.AncientTextBg must remain a Texture2D getter");
+        Require(ImageHelper.GetImagePath("atlases/compressed_atlas.sprites/ancient_text_bg_skill.tres")
+            == "res://images/atlases/compressed_atlas.sprites/ancient_text_bg_skill.tres",
+            "ImageHelper.GetImagePath must keep resolving res://images/ paths");
         Require(typeof(NCardLibraryGrid).GetMethod("FilterCards", Instance, new[] { typeof(Func<CardModel, bool>) }) is not null,
             "NCardLibraryGrid.FilterCards(predicate) Harmony target must exist");
         Require(typeof(NCardLibraryGrid).GetMethod("FilterCards", Instance,

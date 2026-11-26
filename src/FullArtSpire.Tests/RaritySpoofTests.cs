@@ -22,6 +22,15 @@ internal static class RaritySpoofTests
             "gameplay outside both scopes sees the real rarity");
         Require(CardRenderRaritySpoofPatch.Decide(CardRarity.Ancient, false, true, true) == CardRarity.Ancient,
             "real Ancient cards stay Ancient");
+        Require(QuestAncientTextBgPatch.ShouldUseSkillFallback(true, CardType.Quest, CardRarity.Quest),
+            "spoofed Quest cards replace the placeholder ancient_text_bg_quest with the Skill backing");
+        Require(!QuestAncientTextBgPatch.ShouldUseSkillFallback(false, CardType.Quest, CardRarity.Quest),
+            "Quest cards outside reload spoofing stay untouched");
+        Require(!QuestAncientTextBgPatch.ShouldUseSkillFallback(true, CardType.Quest, CardRarity.Ancient),
+            "real Ancient Quest cards keep the game's own texture");
+        foreach (CardType other in new[] { CardType.Attack, CardType.Skill, CardType.Power, CardType.Status, CardType.Curse, CardType.None })
+            Require(!QuestAncientTextBgPatch.ShouldUseSkillFallback(true, other, CardRarity.Common),
+                $"spoofed {other} cards keep the game's own ancient text background");
         Console.WriteLine("Full-art rarity spoof tests passed");
     }
 

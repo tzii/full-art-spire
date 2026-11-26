@@ -21,6 +21,7 @@ try
     FullArtSpire.Tests.PackDiscoveryTests.Run();
     LayerPolicyTests.Run();
     RaritySpoofTests.Run();
+    FullArtSpire.Tests.SettingsTextTests.Run();
     Equal(EffectSurface.Shimmer, EffectFinishSelector.Select(EffectSurface.Holo, FinishAssignment.ByRarity, TrialFinish.Foil, "Common", "card", 0), "common receives satin");
     Equal(EffectSurface.Foil, EffectFinishSelector.Select(EffectSurface.Holo, FinishAssignment.ByRarity, TrialFinish.Foil, "Uncommon", "card", 0), "uncommon receives foil");
     Equal(EffectSurface.Prismatic, EffectFinishSelector.Select(EffectSurface.Holo, FinishAssignment.ByRarity, TrialFinish.Foil, "Rare", "card", 0), "rare receives prismatic");

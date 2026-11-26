@@ -90,10 +90,21 @@ skips effects inside known external viewports.
 
 All user settings are BaseLib `SimpleModConfig` properties in
 `FullArtModConfig` (layers, depth, parallax, effects, finish assignment,
-Reduced Motion, background loading, GPU textures, card reports).
+Reduced Motion, background loading, GPU textures, card reports). Properties are
+declared in page order; `[ConfigSection]` starts each group and
+`[ConfigVisibleIf]` hides options the current choices make moot. Saved values
+are keyed by property name, so names never change.
 
-Pack switches: `FullArtModConfig` overrides `SetupConfigUI` to add a **Card
-packs** section after the generated options. Each switch is BaseLib's own
+Text: BaseLib reads labels, group titles, dropdown entries and hover tips
+(`[ConfigHoverTipsByDefault]`) from the game's `settings_ui` table, normally
+filled from a mod's `.pck`. The mod ships none; `SettingsText` merges English
+entries into the loaded table at startup and on every locale change. A test
+checks every visible option has a label and a hover tip.
+
+Page: `FullArtModConfig` overrides `SetupConfigUI`: a version line (the
+manifest version, read back from the game's mod list, and the live card
+count), the **Card packs** group, the generated groups, then an **Advanced**
+group built by hand so it starts collapsed. Each pack switch is BaseLib's own
 `NConfigTickbox` bound to a `PackToggleProperty`, a synthetic bool
 `PropertyInfo` that reads and writes the hidden `DisabledPacks` setting
 (comma-separated ids). BaseLib saves it on change.

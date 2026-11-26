@@ -11,8 +11,9 @@ Players: get the mod from the Steam Workshop or Nexus Mods, or download
 interactive card previews, in-game footage and screenshots on the
 [showcase site](https://tzii.github.io/full-art-spire/). It needs
 [BaseLib](https://github.com/Alchyr/BaseLib-StS2). 0.4.1 covers every card: all
-577 of the main game and all 140 new cards of the v0.113.1 public beta (the
-Fool's 90 and 50 more).
+577 of the main game and every new card of the v0.113.1–v0.114.0 public beta
+(the Fool's full deck including Twin Shot and Optimism, plus the 50 other beta
+cards).
 
 Until 0.3.4 the mod was **Full Art Card Packs** (`full_art_card_packs`). From
 0.4.0 it is **Full Art Spire** (`full_art_spire`), and this repository is its
@@ -20,8 +21,9 @@ code home. The artwork is made in a separate, private art repository; packs
 arrive here as build inputs, so this repository holds no card art. Releases
 attach the complete mod, every card included.
 
-Status: 0.4.0 is released. 0.4.1 adds full art for the beta's other 50 new
-cards; they are agent-reviewed only and not yet checked in game. Tried in game
+Status: 0.4.0 is released. 0.4.1 adds full art for the beta's other 52 new
+cards (50 from v0.113.1 plus Twin Shot and Optimism from v0.114.0); they are
+agent-reviewed only and not yet checked in game. Tried in game
 for 0.4.0 (v0.113.1 beta): the rename, with
 detection of an installed 0.3.x and import of its settings, every pack
 (including the Fool's), and switching packs live without a restart. Not yet

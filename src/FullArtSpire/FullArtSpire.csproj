@@ -5,6 +5,9 @@
     <Nullable>enable</Nullable>
     <AssemblyName>FullArtSpire</AssemblyName>
     <RootNamespace>FullArtSpire</RootNamespace>
+    <!-- The assembly carries the manifest's version, the fallback the settings page shows. -->
+    <ModManifestText>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)..\..\mod\full_art_spire.json'))</ModManifestText>
+    <Version>$([System.Text.RegularExpressions.Regex]::Match($(ModManifestText), '"version"\s*:\s*"([^"]+)"').Groups[1].Value)</Version>
   </PropertyGroup>
 
   <Import Project="..\Sts2PathDiscovery.props" />
